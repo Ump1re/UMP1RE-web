@@ -1465,13 +1465,22 @@ function calcAmericanoStandings(numPlayers, fixtures, scores) {
 
   const totalPoints = pts.reduce((sum, value) => sum + value, 0);
   const totalPlayed = played.reduce((sum, value) => sum + value, 0);
-  const averageScore = totalPlayed > 0 ? Math.round(totalPoints / totalPlayed) : 0;
-  const maxPlayed = Math.max(...played, 0);
+  const tournamentComplete = fixtures.length > 0 && scores.filter(Boolean).length === fixtures.length;
+  const averageScore = tournamentComplete && totalPlayed > 0
+    ? Math.round(totalPoints / totalPlayed)
+    : 0;
+  const expectedPlayed = tournamentComplete ? Math.max(...played, 0) : 0;
 
   return Array.from({ length: numPlayers }, (_, i) => ({
     playerIdx: i,
-    points: pts[i] + (played[i] > 0 && played[i] < maxPlayed ? averageScore : 0),
-    bonus: played[i] > 0 && played[i] < maxPlayed ? averageScore : 0,
+    points: pts[i] + (
+      tournamentComplete && played[i] > 0 && played[i] < expectedPlayed
+        ? averageScore
+        : 0
+    ),
+    bonus: tournamentComplete && played[i] > 0 && played[i] < expectedPlayed
+      ? averageScore
+      : 0,
     rawPoints: pts[i],
     wins: wins[i],
     played: played[i],
