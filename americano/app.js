@@ -68,6 +68,7 @@ const state = {
   returnPageIndex: 0,
   pendingSkipRoundIndex: null,
   setupStep: 0,
+  leaderboardView: 'adjusted',
   built: false,
 };
 
@@ -698,7 +699,10 @@ function renderLeaderboard() {
   const standings = calcAmericanoStandings(state.numPlayers, state.fixtures, state.scores);
   const completed = countSavedFixtures();
   const missed = getMissedFixtures();
-  const fairnessAdjusted = standings.some(row => row.bonus > 0);
+  const fairnessAdjusted = completed === state.fixtures.length && standings.some(row => row.bonus > 0);
+  const showPointsToggle = fairnessAdjusted;
+  if (!showPointsToggle) state.leaderboardView = 'raw';
+  const displayedPoints = row => state.leaderboardView === 'raw' ? row.rawPoints : row.points;
 
   const missedHtml = missed.length
     ? `
@@ -720,6 +724,12 @@ function renderLeaderboard() {
   els['leaderboard-subtitle'].textContent = `${completed} / ${state.fixtures.length} matches saved${fairnessAdjusted ? ' · uneven games adjusted with an average-score bonus' : ''}`;
   els['leaderboard-body'].innerHTML = `
     ${missedHtml}
+    ${showPointsToggle ? `
+      <div class="points-view-toggle" role="group" aria-label="Leaderboard points view">
+        <button class="btn ${state.leaderboardView === 'raw' ? 'primary' : 'secondary'}" type="button" data-leaderboard-view="raw">Raw</button>
+        <button class="btn ${state.leaderboardView === 'adjusted' ? 'primary' : 'secondary'}" type="button" data-leaderboard-view="adjusted">Adjusted</button>
+      </div>
+    ` : ''}
     <div class="table-wrap">
       <table>
         <thead>
@@ -739,7 +749,7 @@ function renderLeaderboard() {
                 <td>${escapeHtml(state.players[row.playerIdx])}</td>
                 <td>${row.played}</td>
                 <td>${row.wins}</td>
-                <td>${row.points}</td>
+                <td>${displayedPoints(row)}</td>
               </tr>
             `;
           }).join('')}
@@ -747,6 +757,8 @@ function renderLeaderboard() {
       </table>
     </div>
   `;
+  bindLeaderboardViewActions();
+
   if (completed === state.fixtures.length) {
     if (els['leaderboard-actions']) {
       els['leaderboard-actions'].hidden = false;
@@ -766,6 +778,17 @@ function renderLeaderboard() {
     els['leaderboard-actions'].hidden = true;
     els['leaderboard-actions'].innerHTML = '';
   }
+}
+
+function bindLeaderboardViewActions() {
+  document.querySelectorAll('[data-leaderboard-view]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const view = btn.getAttribute('data-leaderboard-view');
+      if (view !== 'raw' && view !== 'adjusted') return;
+      state.leaderboardView = view;
+      renderLeaderboard();
+    });
+  });
 }
 
 function bindLeaderboardShareActions(standings) {
@@ -1128,6 +1151,7 @@ function buildTournament() {
     state.drafts.set(fixtureIdx, { a: null, b: null });
   });
   state.built = true;
+  state.leaderboardView = 'adjusted';
   state.currentRoundIndex = 0;
   state.activeFixtureIndex = null;
   state.setupStep = 0;
