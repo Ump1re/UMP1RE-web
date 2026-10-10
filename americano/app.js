@@ -704,7 +704,6 @@ function getSetupSteps() {
 function renderSetupNamesPage() {
   const players = state.players.map((name, i) => `
     <div class="player-row">
-      <div class="player-index">Player ${i + 1}</div>
       <label class="player-photo-picker" title="Add player photo">
         ${playerAvatar(i)}<span class="player-photo-badge" aria-hidden="true">+</span>
         <input type="file" accept="image/*" data-player-photo="${i}" aria-label="Take or choose a photo for player ${i + 1}">
