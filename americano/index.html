@@ -3396,6 +3396,38 @@
     max-height: 100%;
     aspect-ratio: 4 / 5;
   }
+  .image-saved-toast {
+    position: fixed;
+    z-index: 1000;
+    left: 50%;
+    bottom: max(1rem, env(safe-area-inset-bottom));
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    max-width: calc(100vw - 2rem);
+    padding: 0.65rem 0.75rem 0.65rem 1rem;
+    transform: translateX(-50%);
+    border: 1px solid rgba(217,255,51,0.35);
+    border-radius: 999px;
+    background: rgba(15,17,22,0.96);
+    color: var(--text);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.4);
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+  .image-saved-toast button {
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -3461,7 +3493,7 @@
   </div>
 </div>
 
-<script src="app.js?v=30" defer></script>
+<script src="app.js?v=31" defer></script>
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
