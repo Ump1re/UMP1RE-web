@@ -1824,13 +1824,13 @@
 
   .social-camera-brand {
     position: absolute;
-    z-index: 2;
-    top: 4%;
-    left: 5%;
-    width: 27%;
-    max-height: 8%;
+    z-index: 4;
+    right: 5%;
+    bottom: 0.8%;
+    width: 22%;
+    max-height: 3.8%;
     object-fit: contain;
-    object-position: left center;
+    object-position: right center;
   }
 
   .social-camera-club {
@@ -1842,10 +1842,7 @@
     height: 10%;
     display: grid;
     place-items: center;
-    padding: 2%;
-    border: 1px solid rgba(255,255,255,0.24);
-    border-radius: 12px;
-    background: rgba(8,10,13,0.72);
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.68));
   }
 
   .social-camera-club img {
@@ -1854,39 +1851,12 @@
     object-fit: contain;
   }
 
-  .social-camera-title {
-    position: absolute;
-    z-index: 2;
-    top: 15%;
-    left: 5%;
-    right: 5%;
-    display: grid;
-    gap: 0.08rem;
-    color: #fff;
-    font-family: 'TimesSquare', 'Bebas Neue', sans-serif;
-    line-height: 0.98;
-    text-align: center;
-    text-transform: uppercase;
-    text-shadow: 0 2px 18px rgba(0,0,0,0.48);
-    pointer-events: none;
-  }
-
-  .social-camera-title span {
-    color: var(--lime);
-    font-size: clamp(0.9rem, 4.6cqi, 1.25rem);
-  }
-
-  .social-camera-title strong {
-    font-size: clamp(1.2rem, 7cqi, 1.85rem);
-    font-weight: 400;
-  }
-
   .social-camera-scoreboard {
     position: absolute;
     z-index: 3;
     left: 4.5%;
     right: 4.5%;
-    bottom: 4%;
+    bottom: 5%;
     display: grid;
     gap: 0.12rem;
     padding: 2.5%;
@@ -1894,6 +1864,29 @@
     border-radius: 14px;
     background: rgba(8,10,14,0.94);
     box-shadow: 0 8px 28px rgba(0,0,0,0.32);
+  }
+
+  .social-camera-winner-title {
+    display: grid;
+    justify-items: center;
+    gap: 0;
+    margin: 0 0 0.2rem;
+    font-family: 'TimesSquare', 'Bebas Neue', sans-serif;
+    line-height: 0.95;
+    text-align: center;
+    text-transform: uppercase;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  }
+
+  .social-camera-winner-title span {
+    color: var(--lime);
+    font-size: clamp(0.72rem, 4cqi, 0.95rem);
+  }
+
+  .social-camera-winner-title strong {
+    color: #fff;
+    font-size: clamp(1.05rem, 6cqi, 1.45rem);
+    font-weight: 400;
   }
 
   .social-camera-scoreboard-head {
