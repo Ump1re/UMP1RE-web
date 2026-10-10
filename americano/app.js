@@ -1296,7 +1296,7 @@ async function buildLeaderboardShareImage(standings) {
   ctx.stroke();
   ctx.textBaseline = 'alphabetic';
   if (brand) {
-    drawImageContain(ctx, brand, 112, 1140, 170, 40);
+    drawImageContain(ctx, brand, 112, 1135, 220, 52);
   } else {
     ctx.textAlign = 'left';
     ctx.fillStyle = '#fff';
