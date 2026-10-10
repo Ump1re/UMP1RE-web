@@ -776,7 +776,7 @@ function renderLeaderboard() {
           <div class="leaderboard-share-actions">
             <button class="btn secondary" type="button" data-share-photo>${leaderboardSharePhoto ? 'Change photo' : 'Add photo'}</button>
             <button class="btn secondary" type="button" data-remove-share-photo ${leaderboardSharePhoto ? '' : 'hidden'}>Remove photo</button>
-            <button class="btn primary" type="button" data-preview-leaderboard>Preview image</button>
+            <button class="btn primary" type="button" data-preview-leaderboard>Create Social Post</button>
             <input type="file" accept="image/*" data-share-photo-input hidden>
           </div>
           <div class="leaderboard-share-status" data-share-status>Optionally add a court photo, then preview the share image.</div>
