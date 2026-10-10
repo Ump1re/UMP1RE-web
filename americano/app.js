@@ -74,6 +74,9 @@ const state = {
 
 const els = {};
 let leaderboardSharePhoto = null;
+let leaderboardPreviewActive = false;
+let leaderboardPreviewBlob = null;
+let leaderboardPreviewUrl = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   config = await loadAmericanoConfig();
@@ -216,6 +219,7 @@ function closeLeaderboard() {
   }
   els['leaderboard-modal'].classList.remove('open');
   els['leaderboard-modal'].setAttribute('aria-hidden', 'true');
+  clearLeaderboardPreview();
   if (els['leaderboard-actions']) {
     els['leaderboard-actions'].hidden = true;
     els['leaderboard-actions'].innerHTML = '';
@@ -703,6 +707,11 @@ function renderLeaderboard() {
   if (!showPointsToggle) state.leaderboardView = 'raw';
   const displayedPoints = row => state.leaderboardView === 'raw' ? row.rawPoints : row.points;
 
+  if (leaderboardPreviewActive) {
+    renderLeaderboardSharePreview(standings, fairnessAdjusted);
+    return;
+  }
+
   const missedHtml = missed.length
     ? `
       <div class="missed-fixtures">
@@ -763,15 +772,14 @@ function renderLeaderboard() {
       els['leaderboard-actions'].hidden = false;
       els['leaderboard-actions'].innerHTML = `
         <div class="leaderboard-share">
-          <div class="leaderboard-share-copy">Share the current Americano standings.</div>
+          <div class="leaderboard-share-copy">Preview your finished card before sharing.</div>
           <div class="leaderboard-share-actions">
-            <button class="btn secondary" type="button" data-share-photo>Add photo</button>
+            <button class="btn secondary" type="button" data-share-photo>${leaderboardSharePhoto ? 'Change photo' : 'Add photo'}</button>
             <button class="btn secondary" type="button" data-remove-share-photo ${leaderboardSharePhoto ? '' : 'hidden'}>Remove photo</button>
-            <button class="btn secondary" type="button" data-share-leaderboard="whatsapp">WhatsApp</button>
-            <button class="btn secondary" type="button" data-share-leaderboard="instagram">Share image</button>
+            <button class="btn primary" type="button" data-preview-leaderboard>Preview image</button>
             <input type="file" accept="image/*" data-share-photo-input hidden>
           </div>
-          <div class="leaderboard-share-status" data-share-status>Optionally add a court photo to your leaderboard image.</div>
+          <div class="leaderboard-share-status" data-share-status>Optionally add a court photo, then preview the share image.</div>
         </div>
       `;
     }
@@ -780,6 +788,66 @@ function renderLeaderboard() {
     els['leaderboard-actions'].hidden = true;
     els['leaderboard-actions'].innerHTML = '';
   }
+}
+
+function openLeaderboardSharePreview(standings) {
+  updateLeaderboardShareStatus('Preparing your preview...');
+  buildLeaderboardShareImage(standings)
+    .then(blob => {
+      if (!blob) throw new Error('No share image available');
+      clearLeaderboardPreview();
+      leaderboardPreviewBlob = blob;
+      leaderboardPreviewUrl = URL.createObjectURL(blob);
+      leaderboardPreviewActive = true;
+      renderLeaderboard();
+    })
+    .catch(() => updateLeaderboardShareStatus('Unable to prepare the preview right now.'));
+}
+
+function clearLeaderboardPreview() {
+  leaderboardPreviewActive = false;
+  leaderboardPreviewBlob = null;
+  if (leaderboardPreviewUrl) {
+    URL.revokeObjectURL(leaderboardPreviewUrl);
+    leaderboardPreviewUrl = null;
+  }
+}
+
+function renderLeaderboardSharePreview(standings, fairnessAdjusted) {
+  els['leaderboard-subtitle'].textContent = `Preview image · 1080 × 1350${fairnessAdjusted ? ' · ' + (state.leaderboardView === 'raw' ? 'raw points' : 'adjusted points') : ''}`;
+  els['leaderboard-body'].innerHTML = `
+    <div class="leaderboard-image-preview">
+      <img src="${leaderboardPreviewUrl}" alt="Preview of the Americano final leaderboard share image">
+    </div>
+  `;
+  if (!els['leaderboard-actions']) return;
+  els['leaderboard-actions'].hidden = false;
+  els['leaderboard-actions'].innerHTML = `
+    <div class="leaderboard-share">
+      <div class="leaderboard-share-copy">Choose how you want to share it.</div>
+      <div class="leaderboard-share-actions">
+        <button class="btn secondary" type="button" data-preview-back>Back to standings</button>
+        <button class="btn secondary" type="button" data-preview-whatsapp>WhatsApp text</button>
+        <button class="btn primary" type="button" data-preview-share-image>Share image</button>
+        <button class="btn secondary" type="button" data-preview-download-image>Download image</button>
+      </div>
+      <div class="leaderboard-share-status" data-share-status>Check the card, then choose a sharing option.</div>
+    </div>
+  `;
+
+  document.querySelector('[data-preview-back]')?.addEventListener('click', () => {
+    clearLeaderboardPreview();
+    renderLeaderboard();
+  });
+  document.querySelector('[data-preview-whatsapp]')?.addEventListener('click', () => {
+    shareLeaderboardToWhatsApp(standings);
+  });
+  document.querySelector('[data-preview-share-image]')?.addEventListener('click', () => {
+    shareLeaderboardImageBlob(leaderboardPreviewBlob);
+  });
+  document.querySelector('[data-preview-download-image]')?.addEventListener('click', () => {
+    downloadLeaderboardImage(leaderboardPreviewBlob);
+  });
 }
 
 function bindLeaderboardViewActions() {
@@ -794,18 +862,10 @@ function bindLeaderboardViewActions() {
 }
 
 function bindLeaderboardShareActions(standings) {
-  document.querySelectorAll('[data-share-leaderboard]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const target = btn.getAttribute('data-share-leaderboard');
-      if (target === 'whatsapp') {
-        shareLeaderboardToWhatsApp(standings);
-        return;
-      }
-      if (target === 'instagram') {
-        await shareLeaderboardToInstagram(standings);
-      }
-    });
-  });
+  const previewButton = document.querySelector('[data-preview-leaderboard]');
+  if (previewButton) {
+    previewButton.addEventListener('click', () => openLeaderboardSharePreview(standings));
+  }
 
   const photoInput = document.querySelector('[data-share-photo-input]');
   const addPhotoButton = document.querySelector('[data-share-photo]');
@@ -880,33 +940,45 @@ function shareLeaderboardToWhatsApp(standings) {
 }
 
 async function shareLeaderboardToInstagram(standings) {
-  updateLeaderboardShareStatus('Preparing Instagram image...');
+  updateLeaderboardShareStatus('Preparing image...');
   try {
     const blob = await buildLeaderboardShareImage(standings);
+    await shareLeaderboardImageBlob(blob);
+  } catch (_) {
+    updateLeaderboardShareStatus('Unable to prepare the image right now.');
+  }
+}
+
+async function shareLeaderboardImageBlob(blob) {
+  try {
     if (!blob) throw new Error('No share image available');
     const file = new File([blob], 'americano-leaderboard.png', { type: 'image/png' });
-
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({
-        title: 'Americano leaderboard',
-        files: [file],
-      });
-      updateLeaderboardShareStatus('Instagram-ready image shared.');
+      await navigator.share({ title: 'Americano leaderboard', files: [file] });
+      updateLeaderboardShareStatus('Image ready to share.');
       return;
     }
-
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'americano-leaderboard.png';
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    updateLeaderboardShareStatus('Instagram-ready image downloaded.');
-  } catch (error) {
-    updateLeaderboardShareStatus('Unable to prepare Instagram share right now.');
+    downloadLeaderboardImage(blob);
+    updateLeaderboardShareStatus('Image downloaded. Choose Instagram or another app to post it.');
+  } catch (_) {
+    updateLeaderboardShareStatus('Unable to share the image right now.');
   }
+}
+
+function downloadLeaderboardImage(blob) {
+  if (!blob) {
+    updateLeaderboardShareStatus('No preview image is available to download.');
+    return;
+  }
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'americano-leaderboard.png';
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  updateLeaderboardShareStatus('Image downloaded.');
 }
 
 async function buildLeaderboardShareImage(standings) {
