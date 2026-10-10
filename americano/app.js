@@ -431,7 +431,7 @@ function getSetupSteps() {
       title: 'Players',
       copy: 'Choose how many players are joining this Americano.',
       html: `
-        <div class="choice-group">
+        <div class="choice-group players-step">
           <div class="choice-grid">
             ${config.playerOptions.map(value => `
               <button class="choice-card ${state.numPlayers === value ? 'active' : ''}" type="button" data-player-choice="${value}">
