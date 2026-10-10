@@ -1226,7 +1226,7 @@ async function buildLeaderboardShareImage(standings) {
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.68)';
     ctx.shadowBlur = 18;
-    drawImageContain(ctx, leaderboardClubLogo, 804, 52, 220, 122);
+    drawImageContain(ctx, leaderboardClubLogo, 728, 48, 300, 164);
     ctx.restore();
   }
 
@@ -1296,7 +1296,7 @@ async function buildLeaderboardShareImage(standings) {
   ctx.stroke();
   ctx.textBaseline = 'alphabetic';
   if (brand) {
-    drawImageContain(ctx, brand, 112, 1135, 220, 52);
+    drawImageContain(ctx, brand, 112, 1140, 170, 40);
   } else {
     ctx.textAlign = 'left';
     ctx.fillStyle = '#fff';
