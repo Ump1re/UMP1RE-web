@@ -1943,6 +1943,27 @@
     isolation: isolate;
   }
 
+  .social-camera-photo {
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform-origin: center center;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    cursor: grab;
+    will-change: transform;
+  }
+
+  .social-camera-viewfinder.has-photo {
+    touch-action: none;
+    cursor: grab;
+  }
+
   .social-camera-viewfinder video,
   .social-camera-shade {
     position: absolute;
@@ -3378,7 +3399,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20" defer></script>
+<script src="app.js?v=21" defer></script>
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
