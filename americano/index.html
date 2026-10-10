@@ -3283,6 +3283,36 @@
   .leaderboard-image-preview { padding: 0.25rem; }
   .leaderboard-image-preview img { max-height: min(50vh, 480px); }
   #leaderboard-modal .modal-body:has(.leaderboard-image-preview) { overflow: hidden; }
+  .pwa-install-prompt {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    margin-top: 0.15rem;
+  }
+  .pwa-install-prompt[hidden] { display: none; }
+  .pwa-install-button { min-height: 2.7rem; padding: 0.55rem 1.1rem; font-size: 0.78rem; letter-spacing: 0.08em; }
+  .pwa-install-dismiss {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--dim);
+    font: inherit;
+    cursor: pointer;
+  }
+  .pwa-install-hint {
+    flex-basis: 100%;
+    color: var(--muted);
+    font-size: 0.75rem;
+    line-height: 1.3;
+    text-align: center;
+  }
+  .pwa-install-hint[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -3348,7 +3378,7 @@
   </div>
 </div>
 
-<script src="app.js?v=18" defer></script>
+<script src="app.js?v=19" defer></script>
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
