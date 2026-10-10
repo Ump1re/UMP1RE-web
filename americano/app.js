@@ -1271,11 +1271,9 @@ async function buildLeaderboardShareImage(standings) {
     ctx.fillStyle = isWinner ? 'rgba(9,11,16,0.68)' : 'rgba(245,247,255,0.60)';
     ctx.font = '700 18px Inter, system-ui, sans-serif';
     ctx.fillText(`${row.played} MATCHES  ·  ${row.wins} WINS`, 216, rowY + 47);
-    ctx.textAlign = 'right';
     ctx.fillStyle = textColor;
     ctx.font = '900 40px Inter, system-ui, sans-serif';
-    ctx.fillText(String(row.displayPoints), 956, rowY + 36);
-    ctx.textAlign = 'left';
+    drawTabularScore(ctx, row.displayPoints, 956, rowY + 36, topThree);
   });
 
   ctx.strokeStyle = 'rgba(255,255,255,0.14)';
@@ -1300,6 +1298,18 @@ async function buildLeaderboardShareImage(standings) {
   ctx.textAlign = 'left';
 
   return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+}
+
+function drawTabularScore(ctx, value, right, baseline, rows) {
+  const digits = String(value).split('');
+  const maxDigits = Math.max(1, ...rows.map(row => String(row.displayPoints).length));
+  const cellWidth = Math.max(...'0123456789'.split('').map(digit => ctx.measureText(digit).width));
+  const startX = right - maxDigits * cellWidth + (maxDigits - digits.length) * cellWidth;
+  digits.forEach((digit, index) => {
+    const glyphWidth = ctx.measureText(digit).width;
+    const x = startX + index * cellWidth + (cellWidth - glyphWidth) / 2;
+    ctx.fillText(digit, x, baseline);
+  });
 }
 
 function drawImageContain(ctx, image, x, y, width, height) {
