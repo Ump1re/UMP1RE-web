@@ -835,15 +835,15 @@ function renderLeaderboardSharePreview(standings, fairnessAdjusted) {
   els['leaderboard-actions'].innerHTML = `
     <div class="leaderboard-share">
       <div class="social-action-toolbar social-preview-toolbar">
-        <button class="social-icon-btn" type="button" data-preview-back aria-label="Back to standings" title="Back to standings">${socialIcon('back')}</button>
-        <button class="social-icon-btn" type="button" data-preview-camera aria-label="Take a new photo" title="Take a new photo">${socialIcon('camera')}</button>
-        <button class="social-icon-btn social-icon-btn-logo" type="button" data-preview-logo aria-label="Add or change club logo" title="Add or change club logo">${socialIcon('logo')}</button>
-        <button class="social-icon-btn" type="button" data-preview-replace-photo aria-label="Replace photo" title="Replace photo">${socialIcon('gallery')}</button>
-        <button class="social-icon-btn social-icon-btn-primary" type="button" data-preview-share-image aria-label="Share image" title="Share image">${socialIcon('share')}</button>
+        <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-preview-back aria-label="Back to standings" title="Back to standings">${socialIcon('back')}</button><span class="social-button-label">Back</span></span>
+        <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-preview-camera aria-label="Take a new photo" title="Take a new photo">${socialIcon('camera')}</button><span class="social-button-label">Camera</span></span>
+        <span class="social-labelled-action"><button class="social-icon-btn social-icon-btn-logo" type="button" data-preview-logo aria-label="Add or change club logo" title="Add or change club logo">${socialIcon('logo')}</button><span class="social-button-label">Club logo</span></span>
+        <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-preview-replace-photo aria-label="Replace photo" title="Replace photo">${socialIcon('gallery')}</button><span class="social-button-label">Gallery</span></span>
+        <span class="social-labelled-action"><button class="social-icon-btn social-icon-btn-primary" type="button" data-preview-share-image aria-label="Share image" title="Share image">${socialIcon('share')}</button><span class="social-button-label">Share</span></span>
         <input type="file" accept="image/*" data-preview-replace-photo-input hidden>
         <input type="file" accept="image/*" data-preview-logo-input hidden>
       </div>
-      <div class="leaderboard-share-status" data-share-status>Check the card, then share it or choose Save Image in the share sheet.</div>
+      <div class="leaderboard-share-status" data-share-status aria-live="polite"></div>
     </div>
   `;
 
@@ -970,11 +970,11 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
   els['leaderboard-actions'].innerHTML = `
     <div class="leaderboard-share">
       <div class="social-action-toolbar">
-        <button class="social-icon-btn social-icon-btn-primary" type="button" data-camera-capture aria-label="Take photo" title="Take photo">${socialIcon('camera')}</button>
-        <button class="social-icon-btn" type="button" data-camera-library aria-label="Choose from library" title="Choose from library">${socialIcon('gallery')}</button>
-        <button class="social-icon-btn" type="button" data-camera-logo aria-label="Add or change club logo" title="Add or change club logo">${socialIcon('logo')}</button>
+        <span class="social-labelled-action"><button class="social-icon-btn social-icon-btn-primary" type="button" data-camera-capture aria-label="Take photo" title="Take photo">${socialIcon('camera')}</button><span class="social-button-label">Capture</span></span>
+        <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-library aria-label="Choose from library" title="Choose from library">${socialIcon('gallery')}</button><span class="social-button-label">Gallery</span></span>
+        <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-logo aria-label="Add or change club logo" title="Add or change club logo">${socialIcon('logo')}</button><span class="social-button-label">Club logo</span></span>
         <label class="camera-zoom-control" aria-label="Camera zoom"><span>−</span><input type="range" min="1" max="3" step="0.1" value="${leaderboardCameraZoom}" data-camera-zoom aria-label="Zoom"><span>+</span></label>
-        <button class="social-icon-btn" type="button" data-camera-cancel aria-label="Cancel" title="Cancel">${socialIcon('close')}</button>
+        <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-cancel aria-label="Cancel" title="Cancel">${socialIcon('close')}</button><span class="social-button-label">Back</span></span>
         <input type="file" accept="image/*" data-camera-library-input hidden>
         <input type="file" accept="image/*" data-camera-logo-input hidden>
       </div>
