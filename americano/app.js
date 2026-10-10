@@ -799,7 +799,7 @@ function renderLeaderboard() {
               <span class="social-icon-label">Club logo</span>
               ${leaderboardClubLogo ? `<button class="social-icon-clear" type="button" data-remove-club-logo aria-label="Remove club logo" title="Remove club logo">${socialIcon('close')}</button>` : ''}
             </span>
-            <button class="btn primary social-create-button" type="button" data-preview-leaderboard>${socialIcon('share')}<span>Create Social Post</span></button>
+
             <input type="file" accept="image/*" data-share-photo-input hidden>
             <input type="file" accept="image/*" data-share-club-logo-input hidden>
           </div>
@@ -853,7 +853,6 @@ function renderLeaderboardSharePreview(standings, fairnessAdjusted) {
         <button class="social-icon-btn" type="button" data-preview-back aria-label="Back to standings" title="Back to standings">${socialIcon('back')}</button>
         <button class="social-icon-btn" type="button" data-preview-replace-photo aria-label="Replace photo" title="Replace photo">${socialIcon('gallery')}</button>
         <button class="social-icon-btn social-icon-btn-primary" type="button" data-preview-share-image aria-label="Share image" title="Share image">${socialIcon('share')}</button>
-        <button class="social-icon-btn" type="button" data-preview-save-image aria-label="Save image" title="Save image">${socialIcon('save')}</button>
         <input type="file" accept="image/*" data-preview-replace-photo-input hidden>
       </div>
       <div class="leaderboard-share-status" data-share-status>Check the card, then share it or choose Save Image in the share sheet.</div>
@@ -881,9 +880,6 @@ function renderLeaderboardSharePreview(standings, fairnessAdjusted) {
   });
   document.querySelector('[data-preview-share-image]')?.addEventListener('click', () => {
     shareLeaderboardImageBlob(leaderboardPreviewBlob, 'share');
-  });
-  document.querySelector('[data-preview-save-image]')?.addEventListener('click', () => {
-    shareLeaderboardImageBlob(leaderboardPreviewBlob, 'save');
   });
 }
 
@@ -1109,8 +1105,7 @@ function bindLeaderboardShareActions(standings) {
         const nextPhoto = await loadLeaderboardSharePhoto(file, true);
         releaseLeaderboardImage(leaderboardSharePhoto);
         leaderboardSharePhoto = nextPhoto;
-        renderLeaderboard();
-        updateLeaderboardShareStatus('Photo added. Create the social post when you’re ready.');
+        openLeaderboardSharePreview(standings);
       } catch (_) {
         updateLeaderboardShareStatus('That photo could not be loaded. Try another image.');
       }
