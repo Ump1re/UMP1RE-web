@@ -476,6 +476,11 @@ function renderIntroPage() {
         <div class="landing-actions">
           <button class="btn primary" data-action="start">Start</button>
         </div>
+        <div class="pwa-install-prompt" data-pwa-install hidden>
+          <button class="btn secondary pwa-install-button" type="button" data-pwa-install-button>Install app</button>
+          <span class="pwa-install-hint" data-pwa-install-hint hidden></span>
+          <button class="pwa-install-dismiss" type="button" data-pwa-install-dismiss aria-label="Dismiss install prompt">×</button>
+        </div>
       </div>
     </section>
   `;
@@ -1359,7 +1364,70 @@ function drawImageCover(ctx, image, x, y, width, height, radius = 0) {
   ctx.restore();
 }
 
+const PWA_INSTALL_DISMISSED_KEY = 'ump1re-pwa-install-dismissed';
+let deferredPwaInstallPrompt = null;
+
+function isStandalonePwa() {
+  return window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+}
+
+function isSafariBrowser() {
+  const ua = navigator.userAgent || '';
+  return /Safari/i.test(ua) && !/(Chrome|CriOS|Chromium|Edg|OPR|FxiOS|Firefox|DuckDuckGo)/i.test(ua);
+}
+
+function canShowPwaInstallFallback() {
+  return !isStandalonePwa() && (isSafariBrowser() || /Chrome|Chromium|Edg|OPR|SamsungBrowser/i.test(navigator.userAgent || ''));
+}
+
+function updatePwaInstallPrompt() {
+  const panel = document.querySelector('[data-pwa-install]');
+  if (!panel) return;
+  let dismissed = false;
+  try { dismissed = sessionStorage.getItem(PWA_INSTALL_DISMISSED_KEY) === '1'; } catch (_) {}
+  panel.hidden = isStandalonePwa() || dismissed || (!deferredPwaInstallPrompt && !canShowPwaInstallFallback());
+}
+
+window.addEventListener('beforeinstallprompt', event => {
+  event.preventDefault();
+  deferredPwaInstallPrompt = event;
+  updatePwaInstallPrompt();
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredPwaInstallPrompt = null;
+  const panel = document.querySelector('[data-pwa-install]');
+  if (panel) panel.hidden = true;
+});
 function attachPageHandlers() {
+  const installPanel = document.querySelector('[data-pwa-install]');
+  updatePwaInstallPrompt();
+  const installButton = document.querySelector('[data-pwa-install-button]');
+  const installHint = document.querySelector('[data-pwa-install-hint]');
+  installButton?.addEventListener('click', async () => {
+    if (!deferredPwaInstallPrompt) {
+      if (installHint) {
+        const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        installHint.textContent = ios ? 'Share → Add to Home Screen' : isSafariBrowser() ? 'File → Add to Dock' : 'Browser menu → Install app';
+        installHint.hidden = false;
+      }
+      return;
+    }
+    const promptEvent = deferredPwaInstallPrompt;
+    deferredPwaInstallPrompt = null;
+    try {
+      await promptEvent.prompt();
+      await promptEvent.userChoice;
+      if (installPanel) installPanel.hidden = true;
+    } catch (_) {
+      updatePwaInstallPrompt();
+    }
+  });
+  document.querySelector('[data-pwa-install-dismiss]')?.addEventListener('click', () => {
+    try { sessionStorage.setItem(PWA_INSTALL_DISMISSED_KEY, '1'); } catch (_) {}
+    if (installPanel) installPanel.hidden = true;
+  });
+
   const startBtn = document.querySelector('[data-action="start"]');
   if (startBtn) startBtn.addEventListener('click', () => {
     state.pageIndex = 1;
