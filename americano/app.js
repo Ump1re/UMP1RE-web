@@ -231,7 +231,7 @@ function playerAvatar(index) {
 
 function playerWithAvatar(index) {
   return '<span class="fixture-player">' + playerAvatar(index) +
-    '<span>' + escapeHtml(state.players[index] || 'Player ' + (index + 1)) + '</span></span>';
+    '<span class="fixture-player-name">' + escapeHtml(state.players[index] || 'Player ' + (index + 1)) + '</span></span>';
 }
 
 async function compressPlayerPhoto(file) {
