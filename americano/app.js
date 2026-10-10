@@ -660,7 +660,6 @@ function renderRoundOverviewPage(roundIndex = 0) {
         <div class="play-card">
           <div class="play-head">
             ${renderCardBrand()}
-            <div class="play-kicker">Round</div>
             <h2>${escapeHtml(roundLabel)}</h2>
           </div>
           <div class="play-body round-page">
