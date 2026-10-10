@@ -785,17 +785,21 @@
 
   body[data-page-mode="setup"] .players-step .choice-card {
     width: 100%;
+    min-width: 0;
     align-self: stretch;
-    align-content: center;
-    justify-items: stretch;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.28rem;
     text-align: center;
   }
 
   body[data-page-mode="setup"] .players-step .choice-value,
   body[data-page-mode="setup"] .players-step .choice-sub {
     display: block;
-    width: 100%;
-    justify-self: stretch;
+    width: auto;
+    max-width: 100%;
     text-align: center;
   }
 
