@@ -74,6 +74,7 @@ const state = {
 
 const els = {};
 let leaderboardSharePhoto = null;
+let leaderboardClubLogo = null;
 let leaderboardPreviewActive = false;
 let leaderboardPreviewBlob = null;
 let leaderboardPreviewUrl = null;
@@ -772,14 +773,17 @@ function renderLeaderboard() {
       els['leaderboard-actions'].hidden = false;
       els['leaderboard-actions'].innerHTML = `
         <div class="leaderboard-share">
-          <div class="leaderboard-share-copy">Preview your finished card before sharing.</div>
+          <div class="leaderboard-share-copy">Compose your Americano social post.</div>
           <div class="leaderboard-share-actions">
-            <button class="btn secondary" type="button" data-share-photo>${leaderboardSharePhoto ? 'Change photo' : 'Add photo'}</button>
+            <button class="btn secondary" type="button" data-share-photo>${leaderboardSharePhoto ? 'Change team photo' : 'Add team photo'}</button>
             <button class="btn secondary" type="button" data-remove-share-photo ${leaderboardSharePhoto ? '' : 'hidden'}>Remove photo</button>
+            <button class="btn secondary" type="button" data-share-club-logo>${leaderboardClubLogo ? 'Change club logo' : 'Add club logo'}</button>
+            <button class="btn secondary" type="button" data-remove-club-logo ${leaderboardClubLogo ? '' : 'hidden'}>Remove logo</button>
             <button class="btn primary" type="button" data-preview-leaderboard>Create Social Post</button>
             <input type="file" accept="image/*" data-share-photo-input hidden>
+            <input type="file" accept="image/*" data-share-club-logo-input hidden>
           </div>
-          <div class="leaderboard-share-status" data-share-status>Optionally add a court photo, then preview the share image.</div>
+          <div class="leaderboard-share-status" data-share-status>Choose a team photo. Add your club logo if you want.</div>
         </div>
       `;
     }
@@ -863,30 +867,36 @@ function bindLeaderboardViewActions() {
 
 function bindLeaderboardShareActions(standings) {
   const previewButton = document.querySelector('[data-preview-leaderboard]');
-  if (previewButton) {
-    previewButton.addEventListener('click', () => openLeaderboardSharePreview(standings));
-  }
-
   const photoInput = document.querySelector('[data-share-photo-input]');
   const addPhotoButton = document.querySelector('[data-share-photo]');
   const removePhotoButton = document.querySelector('[data-remove-share-photo]');
+  const logoInput = document.querySelector('[data-share-club-logo-input]');
+  const addLogoButton = document.querySelector('[data-share-club-logo]');
+  const removeLogoButton = document.querySelector('[data-remove-club-logo]');
+
+  if (previewButton) {
+    previewButton.addEventListener('click', () => {
+      if (!leaderboardSharePhoto) {
+        updateLeaderboardShareStatus('Add the team photo to start your social post.');
+        photoInput?.click();
+        return;
+      }
+      openLeaderboardSharePreview(standings);
+    });
+  }
 
   if (addPhotoButton && photoInput) {
     addPhotoButton.addEventListener('click', () => photoInput.click());
     photoInput.addEventListener('change', async () => {
       const file = photoInput.files?.[0];
       if (!file) return;
-      if (!file.type.startsWith('image/')) {
-        updateLeaderboardShareStatus('Choose an image file for the photo frame.');
-        return;
-      }
       try {
         leaderboardSharePhoto = await loadLeaderboardSharePhoto(file);
-        addPhotoButton.textContent = 'Change photo';
+        addPhotoButton.textContent = 'Change team photo';
         if (removePhotoButton) removePhotoButton.hidden = false;
-        updateLeaderboardShareStatus('Photo added. It will appear in the framed space on your image.');
+        updateLeaderboardShareStatus('Team photo added. Add a club logo if you like, then create the post.');
       } catch (_) {
-        updateLeaderboardShareStatus('That photo could not be loaded. Try another image.');
+        updateLeaderboardShareStatus('That team photo could not be loaded. Try another image.');
       }
     });
   }
@@ -895,9 +905,35 @@ function bindLeaderboardShareActions(standings) {
     removePhotoButton.addEventListener('click', () => {
       leaderboardSharePhoto = null;
       if (photoInput) photoInput.value = '';
-      if (addPhotoButton) addPhotoButton.textContent = 'Add photo';
+      if (addPhotoButton) addPhotoButton.textContent = 'Add team photo';
       removePhotoButton.hidden = true;
-      updateLeaderboardShareStatus('Photo removed. The share image will use the Ump1re photo frame.');
+      updateLeaderboardShareStatus('Add the team photo to start your social post.');
+    });
+  }
+
+  if (addLogoButton && logoInput) {
+    addLogoButton.addEventListener('click', () => logoInput.click());
+    logoInput.addEventListener('change', async () => {
+      const file = logoInput.files?.[0];
+      if (!file) return;
+      try {
+        leaderboardClubLogo = await loadLeaderboardSharePhoto(file);
+        addLogoButton.textContent = 'Change club logo';
+        if (removeLogoButton) removeLogoButton.hidden = false;
+        updateLeaderboardShareStatus('Club logo added. It will appear over the hero photo.');
+      } catch (_) {
+        updateLeaderboardShareStatus('That club logo could not be loaded. Try a PNG or JPG.');
+      }
+    });
+  }
+
+  if (removeLogoButton) {
+    removeLogoButton.addEventListener('click', () => {
+      leaderboardClubLogo = null;
+      if (logoInput) logoInput.value = '';
+      if (addLogoButton) addLogoButton.textContent = 'Add club logo';
+      removeLogoButton.hidden = true;
+      updateLeaderboardShareStatus('Club logo removed.');
     });
   }
 }
@@ -992,235 +1028,161 @@ async function buildLeaderboardShareImage(standings) {
 
   const lime = '#d9ff33';
   const ink = '#090b10';
-  const muted = 'rgba(245,247,255,0.62)';
-  const visibleRows = standings.map((row, index) => ({
+  const rows = standings.slice(0, 3).map((row, index) => ({
     ...row,
     rank: index + 1,
     displayPoints: state.leaderboardView === 'raw' ? row.rawPoints : row.points,
   }));
-  const champion = visibleRows[0];
-  const remaining = visibleRows.slice(1);
-  const displayMode = state.leaderboardView === 'raw' ? 'RAW POINTS' : 'ADJUSTED POINTS';
-  const hasAdjustments = visibleRows.some(row => row.bonus > 0);
 
-  // Deep charcoal field with a restrained lime glow and subtle court geometry.
-  const background = ctx.createLinearGradient(0, 0, width, height);
-  background.addColorStop(0, '#10131b');
-  background.addColorStop(0.56, ink);
-  background.addColorStop(1, '#171b22');
-  ctx.fillStyle = background;
-  ctx.fillRect(0, 0, width, height);
+  if (document.fonts?.load) await document.fonts.load('96px TimesSquare');
 
-  const glow = ctx.createRadialGradient(930, 60, 20, 930, 60, 720);
-  glow.addColorStop(0, 'rgba(217,255,51,0.13)');
-  glow.addColorStop(1, 'rgba(217,255,51,0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, width, height);
+  if (leaderboardSharePhoto) {
+    drawImageCover(ctx, leaderboardSharePhoto, 0, 0, width, 970);
+  } else {
+    const fallback = ctx.createLinearGradient(0, 0, width, 970);
+    fallback.addColorStop(0, '#222a32');
+    fallback.addColorStop(1, '#090b10');
+    ctx.fillStyle = fallback;
+    ctx.fillRect(0, 0, width, 970);
+    ctx.strokeStyle = 'rgba(217,255,51,0.13)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(70, 120, width - 140, 650);
+  }
 
-  ctx.save();
-  ctx.strokeStyle = 'rgba(255,255,255,0.035)';
-  ctx.lineWidth = 2;
-  roundRect(ctx, 36, 36, width - 72, height - 72, 30);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(845, 36);
-  ctx.lineTo(845, 228);
-  ctx.moveTo(36, 132);
-  ctx.lineTo(width - 36, 132);
-  ctx.stroke();
-  ctx.restore();
+  const lowerShade = ctx.createLinearGradient(0, 0, 0, 970);
+  lowerShade.addColorStop(0, 'rgba(5,7,10,0.62)');
+  lowerShade.addColorStop(0.32, 'rgba(5,7,10,0.18)');
+  lowerShade.addColorStop(0.68, 'rgba(5,7,10,0.15)');
+  lowerShade.addColorStop(1, 'rgba(5,7,10,0.70)');
+  ctx.fillStyle = lowerShade;
+  ctx.fillRect(0, 0, width, 970);
 
-  // Use the supplied Ump1re wordmark, with a text fallback if it cannot load.
-  if (document.fonts?.load) await document.fonts.load('76px TimesSquare');
-  const logo = await new Promise(resolve => {
+  const brand = await new Promise(resolve => {
     const image = new Image();
     image.onload = () => resolve(image);
     image.onerror = () => resolve(null);
     image.src = '/assets/UMP1RE_Logo.svg';
   });
-  if (logo) {
-    ctx.drawImage(logo, 72, 58, 154, 63);
+  if (brand) {
+    ctx.drawImage(brand, 62, 52, 178, 73);
   } else {
-    ctx.fillStyle = lime;
+    ctx.fillStyle = '#fff';
     ctx.font = '900 34px Inter, system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('UMP1RE', 72, 101);
+    ctx.fillText('UMP1RE', 70, 100);
   }
 
-  ctx.textAlign = 'right';
-  ctx.fillStyle = lime;
-  ctx.font = '800 20px Inter, system-ui, sans-serif';
-  ctx.fillText('MATCH COMPLETE', 1008, 82);
-  ctx.fillStyle = muted;
-  ctx.font = '700 17px Inter, system-ui, sans-serif';
-  ctx.fillText(`${state.players.length} PLAYERS  ·  ${state.schedule.length} ROUNDS`, 1008, 111);
-
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#f5f7ff';
-  ctx.font = '76px TimesSquare, Inter, system-ui, sans-serif';
-  ctx.fillText('AMERICANO', 72, 220);
-  ctx.fillStyle = muted;
-  ctx.font = '600 21px Inter, system-ui, sans-serif';
-  ctx.fillText('FINAL STANDINGS', 76, 256);
-
-  // Champion panel.
-  const heroX = 72;
-  const heroY = 288;
-  const heroW = 936;
-  const heroH = 240;
-  ctx.fillStyle = lime;
-  roundRect(ctx, heroX, heroY, heroW, heroH, 28);
-  ctx.fill();
-  ctx.fillStyle = 'rgba(9,11,16,0.08)';
-  ctx.beginPath();
-  ctx.arc(910, 334, 145, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.textAlign = 'left';
-  ctx.fillStyle = 'rgba(9,11,16,0.66)';
-  ctx.font = '900 18px Inter, system-ui, sans-serif';
-  ctx.fillText('TOURNAMENT WINNER', 112, 335);
-
-  ctx.fillStyle = ink;
-  ctx.font = '900 52px Inter, system-ui, sans-serif';
-  drawCanvasText(ctx, state.players[champion.playerIdx], 112, 405, 490);
-  ctx.fillStyle = 'rgba(9,11,16,0.72)';
-  ctx.font = '800 17px Inter, system-ui, sans-serif';
-  ctx.fillText(`${champion.displayPoints} POINTS  ·  ${champion.played} MATCHES  ·  ${champion.wins} WINS`, 116, 459);
-
-  const photoX = 650;
-  const photoY = 307;
-  const photoW = 324;
-  const photoH = 202;
-  ctx.fillStyle = 'rgba(9,11,16,0.88)';
-  roundRect(ctx, photoX, photoY, photoW, photoH, 20);
-  ctx.fill();
-  if (leaderboardSharePhoto) {
-    drawImageCover(ctx, leaderboardSharePhoto, photoX + 7, photoY + 7, photoW - 14, photoH - 14, 15);
-  } else {
-    ctx.save();
-    ctx.strokeStyle = 'rgba(217,255,51,0.72)';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(photoX + photoW / 2, photoY + 68, 24, Math.PI, 0);
-    ctx.lineTo(photoX + photoW / 2 + 34, photoY + 99);
-    ctx.lineTo(photoX + photoW / 2 + 34, photoY + 111);
-    ctx.lineTo(photoX + photoW / 2 - 34, photoY + 111);
-    ctx.lineTo(photoX + photoW / 2 - 34, photoY + 99);
-    ctx.closePath();
+  if (leaderboardClubLogo) {
+    const logoBox = { x: 796, y: 54, width: 220, height: 118 };
+    ctx.fillStyle = 'rgba(8,10,13,0.72)';
+    roundRect(ctx, logoBox.x, logoBox.y, logoBox.width, logoBox.height, 20);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.24)';
+    ctx.lineWidth = 2;
+    roundRect(ctx, logoBox.x, logoBox.y, logoBox.width, logoBox.height, 20);
     ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(photoX + photoW / 2, photoY + 68, 9, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-    ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(245,247,255,0.92)';
-    ctx.font = '800 17px Inter, system-ui, sans-serif';
-    ctx.fillText('ADD A PHOTO', photoX + photoW / 2, photoY + 151);
-    ctx.fillStyle = 'rgba(245,247,255,0.55)';
-    ctx.font = '600 13px Inter, system-ui, sans-serif';
-    ctx.fillText('YOUR COURT-SIDE MOMENT', photoX + photoW / 2, photoY + 176);
-    ctx.textAlign = 'left';
+    drawImageContain(ctx, leaderboardClubLogo, logoBox.x + 16, logoBox.y + 14, logoBox.width - 32, logoBox.height - 28);
   }
-  ctx.strokeStyle = 'rgba(9,11,16,0.20)';
-  roundRect(ctx, photoX, photoY, photoW, photoH, 20);
-  ctx.stroke();
-
-  const tableX = 72;
-  const tableW = 936;
-  const tableTop = 568;
-  const tableBottom = 1240;
-  const headerY = 602;
-  const rowsTop = 632;
-  const rowHeight = remaining.length
-    ? Math.min(82, (tableBottom - rowsTop) / remaining.length)
-    : 72;
 
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#f5f7ff';
-  ctx.font = '900 22px Inter, system-ui, sans-serif';
-  ctx.fillText('THE LEADERBOARD', tableX, 554);
-  ctx.textAlign = 'right';
+  ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = lime;
-  ctx.font = '800 15px Inter, system-ui, sans-serif';
-  ctx.fillText(displayMode, tableX + tableW, 554);
-
-  ctx.fillStyle = 'rgba(255,255,255,0.045)';
-  roundRect(ctx, tableX, tableTop, tableW, tableBottom - tableTop, 22);
+  ctx.font = '96px TimesSquare, Inter, system-ui, sans-serif';
+  drawCanvasText(ctx, 'AMERICANO', 68, 304, 850);
+  ctx.fillStyle = '#fff';
+  ctx.font = '112px TimesSquare, Inter, system-ui, sans-serif';
+  ctx.fillText('WINNER', 68, 421);
+  ctx.fillStyle = lime;
+  roundRect(ctx, 72, 449, 160, 8, 4);
   ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.58)';
-  ctx.font = '800 15px Inter, system-ui, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('RANK', 96, headerY);
-  ctx.fillText('PLAYER', 194, headerY);
-  ctx.textAlign = 'right';
-  ctx.fillText('PLAYED', 736, headerY);
-  ctx.fillText('WON', 844, headerY);
-  ctx.fillStyle = lime;
-  ctx.fillText('POINTS', 984, headerY);
-  ctx.strokeStyle = 'rgba(255,255,255,0.10)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(96, 616);
-  ctx.lineTo(984, 616);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '800 18px Inter, system-ui, sans-serif';
+  ctx.fillText('FINAL STANDINGS', 76, 786);
+
+  // Dark scoreboard panel overlaps the bottom of the hero photo.
+  const panel = { x: 48, y: 810, width: 984, height: 474 };
+  ctx.fillStyle = 'rgba(8,10,14,0.94)';
+  roundRect(ctx, panel.x, panel.y, panel.width, panel.height, 28);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(217,255,51,0.44)';
+  ctx.lineWidth = 2;
+  roundRect(ctx, panel.x, panel.y, panel.width, panel.height, 28);
   ctx.stroke();
 
-  remaining.forEach((row, index) => {
-    const centerY = rowsTop + (rowHeight * index) + (rowHeight / 2);
-    if (index % 2 === 0) {
-      ctx.fillStyle = 'rgba(255,255,255,0.025)';
-      roundRect(ctx, 84, centerY - rowHeight / 2 + 2, tableW - 24, rowHeight - 4, 12);
+  ctx.fillStyle = 'rgba(245,247,255,0.62)';
+  ctx.font = '800 16px Inter, system-ui, sans-serif';
+  ctx.fillText('TOP THREE', 84, 856);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(245,247,255,0.62)';
+  ctx.fillText(state.leaderboardView === 'raw' ? 'RAW POINTS' : 'ADJUSTED POINTS', 996, 856);
+  ctx.textAlign = 'left';
+
+  rows.forEach((row, index) => {
+    const rowY = 875 + index * 122;
+    if (index === 0) {
+      ctx.fillStyle = lime;
+      roundRect(ctx, 70, rowY, 940, 108, 18);
       ctx.fill();
+      ctx.fillStyle = ink;
+    } else {
+      if (index === 2) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(88, rowY - 5);
+        ctx.lineTo(992, rowY - 5);
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#fff';
     }
-    ctx.textBaseline = 'middle';
 
-    ctx.fillStyle = '#d9ff33';
-    ctx.font = '800 19px Inter, system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(String(row.rank).padStart(2, '0'), 98, centerY);
+    const textColor = index === 0 ? ink : '#f5f7ff';
+    ctx.fillStyle = index === 0 ? 'rgba(9,11,16,0.68)' : lime;
+    ctx.font = '900 18px Inter, system-ui, sans-serif';
+    ctx.fillText(index === 0 ? '1ST' : index === 1 ? '2ND' : '3RD', 96, rowY + 42);
 
-    ctx.fillStyle = '#f5f7ff';
-    ctx.font = '700 21px Inter, system-ui, sans-serif';
-    drawCanvasText(ctx, state.players[row.playerIdx], 194, centerY, 460);
+    ctx.fillStyle = textColor;
+    ctx.font = '800 30px Inter, system-ui, sans-serif';
+    drawCanvasText(ctx, state.players[row.playerIdx], 190, rowY + 45, 530);
+    ctx.fillStyle = index === 0 ? 'rgba(9,11,16,0.68)' : 'rgba(245,247,255,0.60)';
+    ctx.font = '700 15px Inter, system-ui, sans-serif';
+    ctx.fillText(`${row.played} MATCHES  ·  ${row.wins} WINS`, 192, rowY + 76);
 
-    ctx.fillStyle = 'rgba(245,247,255,0.78)';
-    ctx.font = '700 20px Inter, system-ui, sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(String(row.played), 736, centerY);
-    ctx.fillText(String(row.wins), 844, centerY);
-    ctx.fillStyle = '#f5f7ff';
-    ctx.font = '800 21px Inter, system-ui, sans-serif';
-    ctx.fillText(String(row.displayPoints), 984, centerY);
-    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = textColor;
+    ctx.font = '900 38px Inter, system-ui, sans-serif';
+    ctx.fillText(String(row.displayPoints), 968, rowY + 49);
+    ctx.fillStyle = index === 0 ? 'rgba(9,11,16,0.68)' : 'rgba(245,247,255,0.60)';
+    ctx.font = '800 13px Inter, system-ui, sans-serif';
+    ctx.fillText('POINTS', 968, rowY + 76);
+    ctx.textAlign = 'left';
   });
 
-  if (hasAdjustments) {
-    ctx.textAlign = 'left';
-    ctx.fillStyle = muted;
-    ctx.font = '500 15px Inter, system-ui, sans-serif';
-    ctx.fillText(
-      state.leaderboardView === 'raw'
-        ? 'Raw scores shown · adjusted points account for uneven games played'
-        : 'Adjusted points include an average-score bonus for uneven games played',
-      76,
-      1274
-    );
-  }
-
-  ctx.strokeStyle = 'rgba(255,255,255,0.10)';
-  ctx.beginPath();
-  ctx.moveTo(72, 1296);
-  ctx.lineTo(1008, 1296);
-  ctx.stroke();
   ctx.textAlign = 'left';
-  ctx.fillStyle = 'rgba(245,247,255,0.54)';
-  ctx.font = '700 15px Inter, system-ui, sans-serif';
-  ctx.fillText('PADEL. SCORED PROPERLY.', 76, 1325);
+  ctx.fillStyle = 'rgba(245,247,255,0.56)';
+  ctx.font = '700 16px Inter, system-ui, sans-serif';
+  ctx.fillText('PADel. SCORED PROPERLY.'.toUpperCase(), 72, 1330);
   ctx.textAlign = 'right';
   ctx.fillStyle = lime;
-  ctx.font = '800 16px Inter, system-ui, sans-serif';
-  ctx.fillText('UMP1RE.NET', 1004, 1325);
+  ctx.font = '800 17px Inter, system-ui, sans-serif';
+  ctx.fillText('UMP1RE.NET', 1008, 1330);
 
   return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+}
+
+function drawImageContain(ctx, image, x, y, width, height) {
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const scale = Math.min(width / sourceWidth, height / sourceHeight);
+  const drawWidth = sourceWidth * scale;
+  const drawHeight = sourceHeight * scale;
+  ctx.drawImage(
+    image,
+    x + (width - drawWidth) / 2,
+    y + (height - drawHeight) / 2,
+    drawWidth,
+    drawHeight
+  );
 }
 
 function roundRect(ctx, x, y, width, height, radius) {
