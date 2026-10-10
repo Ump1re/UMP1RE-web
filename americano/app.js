@@ -788,7 +788,8 @@ function renderLeaderboard() {
       els['leaderboard-actions'].innerHTML = `
         <div class="leaderboard-share">
           <div class="leaderboard-share-copy">Compose your Americano social post.</div>
-          <div class="social-action-toolbar">
+          <div class="social-action-toolbar social-compose-toolbar">
+            <button class="btn primary social-create-button" type="button" data-preview-leaderboard>${socialIcon('share')}<span>Create Social Post</span></button>
             <button class="social-icon-btn" type="button" data-team-camera aria-label="${leaderboardSharePhoto ? 'Retake the team photo' : 'Take a team photo'}" title="${leaderboardSharePhoto ? 'Retake the team photo' : 'Take a team photo'}">${socialIcon('camera')}</button>
             <span class="social-icon-control">
               <button class="social-icon-btn" type="button" data-share-photo aria-label="${leaderboardSharePhoto ? 'Replace photo' : 'Choose a photo'}" title="${leaderboardSharePhoto ? 'Replace photo' : 'Choose a photo'}">${leaderboardSharePhoto? `<img src="${leaderboardSharePhoto._shareObjectUrl}" alt="">`:socialIcon('gallery')}</button>
@@ -799,7 +800,6 @@ function renderLeaderboard() {
               <span class="social-icon-label">Club logo</span>
               ${leaderboardClubLogo ? `<button class="social-icon-clear" type="button" data-remove-club-logo aria-label="Remove club logo" title="Remove club logo">${socialIcon('close')}</button>` : ''}
             </span>
-            <button class="btn primary social-create-button" type="button" data-preview-leaderboard>${socialIcon('share')}<span>Create Social Post</span></button>
             <input type="file" accept="image/*" data-share-photo-input hidden>
             <input type="file" accept="image/*" data-share-club-logo-input hidden>
           </div>
