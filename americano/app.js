@@ -929,17 +929,16 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
     <div class="social-camera-viewfinder">
       <video data-social-camera autoplay muted playsinline aria-label="Live camera preview"></video>
       <div class="social-camera-shade"></div>
-      <img class="social-camera-brand" src="/assets/UMP1RE_Logo.svg" alt="Ump1re">
       ${leaderboardClubLogo
         ? `<div class="social-camera-club"><img src="${leaderboardClubLogo._shareObjectUrl}" alt="Club logo"></div>`
         : ''}
-      <div class="social-camera-title">
-        <span>Americano</span>
-        <strong>Winner</strong>
-      </div>
       <div class="social-camera-scoreboard">
+        <div class="social-camera-winner-title">
+          <span>Americano</span>
+          <strong>Winner</strong>
+        </div>
         <div class="social-camera-scoreboard-head">
-          <span>Top three</span>
+          <span>Final standings</span>
           <span>${state.leaderboardView === 'raw' ? 'Raw points' : 'Points'}</span>
         </div>
         ${topThree.map((row, index) => `
@@ -1218,40 +1217,16 @@ async function buildLeaderboardShareImage(standings) {
     image.onerror = () => resolve(null);
     image.src = '/assets/UMP1RE_Logo.svg';
   });
-  if (brand) {
-    ctx.drawImage(brand, 62, 52, 178, 73);
-  } else {
-    ctx.fillStyle = '#fff';
-    ctx.font = '900 34px Inter, system-ui, sans-serif';
-    ctx.fillText('UMP1RE', 70, 100);
-  }
-
   if (leaderboardClubLogo) {
-    const logoBox = { x: 796, y: 54, width: 220, height: 118 };
-    ctx.fillStyle = 'rgba(8,10,13,0.72)';
-    roundRect(ctx, logoBox.x, logoBox.y, logoBox.width, logoBox.height, 20);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.24)';
-    ctx.lineWidth = 2;
-    roundRect(ctx, logoBox.x, logoBox.y, logoBox.width, logoBox.height, 20);
-    ctx.stroke();
-    drawImageContain(ctx, leaderboardClubLogo, logoBox.x + 16, logoBox.y + 14, logoBox.width - 32, logoBox.height - 28);
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.68)';
+    ctx.shadowBlur = 18;
+    drawImageContain(ctx, leaderboardClubLogo, 804, 52, 220, 122);
+    ctx.restore();
   }
 
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = lime;
-  ctx.font = '42px TimesSquare, Inter, system-ui, sans-serif';
-  drawCanvasText(ctx, 'AMERICANO', 68, 252, 850);
-  ctx.fillStyle = '#fff';
-  ctx.font = '54px TimesSquare, Inter, system-ui, sans-serif';
-  ctx.fillText('WINNER', 68, 312);
-  ctx.fillStyle = lime;
-  roundRect(ctx, 72, 332, 92, 5, 2.5);
-  ctx.fill();
-
-  // A dark scoreboard panel carries the top three across the lower third of the photo.
-  const panel = { x: 48, y: 810, width: 984, height: 474 };
+  // The title and top three share one lower-third scoreboard card.
+  const panel = { x: 48, y: 740, width: 984, height: 548 };
   ctx.fillStyle = 'rgba(8,10,14,0.93)';
   roundRect(ctx, panel.x, panel.y, panel.width, panel.height, 28);
   ctx.fill();
@@ -1260,15 +1235,25 @@ async function buildLeaderboardShareImage(standings) {
   roundRect(ctx, panel.x, panel.y, panel.width, panel.height, 28);
   ctx.stroke();
 
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = lime;
+  ctx.font = '36px TimesSquare, Inter, system-ui, sans-serif';
+  ctx.fillText('AMERICANO', width / 2, 790);
+  ctx.fillStyle = '#fff';
+  ctx.font = '48px TimesSquare, Inter, system-ui, sans-serif';
+  ctx.fillText('WINNER', width / 2, 842);
+
+  ctx.textAlign = 'left';
   ctx.fillStyle = 'rgba(245,247,255,0.64)';
   ctx.font = '800 16px Inter, system-ui, sans-serif';
-  ctx.fillText('FINAL STANDINGS', 84, 856);
+  ctx.fillText('FINAL STANDINGS', 84, 872);
   ctx.textAlign = 'right';
-  ctx.fillText(state.leaderboardView === 'raw' ? 'RAW POINTS' : 'POINTS', 996, 856);
+  ctx.fillText(state.leaderboardView === 'raw' ? 'RAW POINTS' : 'POINTS', 996, 872);
   ctx.textAlign = 'left';
 
   rows.forEach((row, index) => {
-    const rowY = 875 + index * 122;
+    const rowY = 890 + index * 122;
     if (index === 0) {
       ctx.fillStyle = lime;
       roundRect(ctx, 70, rowY, 940, 108, 18);
@@ -1306,10 +1291,14 @@ async function buildLeaderboardShareImage(standings) {
   ctx.fillStyle = 'rgba(245,247,255,0.58)';
   ctx.font = '700 16px Inter, system-ui, sans-serif';
   ctx.fillText('PADEL. SCORED PROPERLY.', 72, 1330);
-  ctx.textAlign = 'right';
-  ctx.fillStyle = lime;
-  ctx.font = '800 17px Inter, system-ui, sans-serif';
-  ctx.fillText('UMP1RE.NET', 1008, 1330);
+  if (brand) {
+    drawImageContain(ctx, brand, 838, 1297, 170, 50);
+  } else {
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#fff';
+    ctx.font = '900 25px Inter, system-ui, sans-serif';
+    ctx.fillText('UMP1RE', 1008, 1330);
+  }
 
   return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
 }
