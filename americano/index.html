@@ -1790,6 +1790,33 @@
     text-align: center;
   }
 
+  .leaderboard-image-preview {
+    display: grid;
+    place-items: center;
+    min-height: 0;
+    padding: 0.75rem;
+  }
+
+  .leaderboard-image-preview img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: min(100%, 420px);
+    max-height: 64vh;
+    aspect-ratio: 4 / 5;
+    object-fit: contain;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    background: #090b10;
+    box-shadow: 0 18px 54px rgba(0,0,0,0.38);
+  }
+
+  #leaderboard-modal .modal-body:has(.leaderboard-image-preview) {
+    display: grid;
+    align-content: center;
+    overflow-y: auto;
+  }
+
   .leaderboard-head-copy {
     display: grid;
     gap: 0.35rem;
