@@ -799,7 +799,7 @@ function renderLeaderboard() {
               <span class="social-icon-label">Club logo</span>
               ${leaderboardClubLogo ? `<button class="social-icon-clear" type="button" data-remove-club-logo aria-label="Remove club logo" title="Remove club logo">${socialIcon('close')}</button>` : ''}
             </span>
-
+            <button class="btn primary social-create-button" type="button" data-preview-leaderboard>${socialIcon('share')}<span>Create Social Post</span></button>
             <input type="file" accept="image/*" data-share-photo-input hidden>
             <input type="file" accept="image/*" data-share-club-logo-input hidden>
           </div>
@@ -1108,7 +1108,8 @@ function bindLeaderboardShareActions(standings) {
         const nextPhoto = await loadLeaderboardSharePhoto(file, true);
         releaseLeaderboardImage(leaderboardSharePhoto);
         leaderboardSharePhoto = nextPhoto;
-        openLeaderboardSharePreview(standings);
+        renderLeaderboard();
+        updateLeaderboardShareStatus('Photo added. Create the social post when you’re ready.');
       } catch (_) {
         updateLeaderboardShareStatus('That photo could not be loaded. Try another image.');
       }
@@ -1284,7 +1285,7 @@ async function buildLeaderboardShareImage(standings) {
   }
 
   // The title and top three share one lower-third scoreboard card.
-  const panel = { x: 48, y: 740, width: 984, height: 578 };
+  const panel = { x: 48, y: 790, width: 984, height: 495 };
   ctx.fillStyle = 'rgba(8,10,14,0.93)';
   roundRect(ctx, panel.x, panel.y, panel.width, panel.height, 28);
   ctx.fill();
@@ -1297,24 +1298,24 @@ async function buildLeaderboardShareImage(standings) {
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = lime;
   ctx.font = '36px TimesSquare, Inter, system-ui, sans-serif';
-  ctx.fillText('AMERICANO', width / 2, 790);
+  ctx.fillText('AMERICANO', width / 2, 830);
   ctx.fillStyle = '#fff';
   ctx.font = '48px TimesSquare, Inter, system-ui, sans-serif';
-  ctx.fillText('WINNER', width / 2, 842);
+  ctx.fillText('WINNER', width / 2, 872);
 
   ctx.textAlign = 'left';
   ctx.fillStyle = 'rgba(245,247,255,0.64)';
   ctx.font = '800 16px Inter, system-ui, sans-serif';
-  ctx.fillText('FINAL STANDINGS', 84, 872);
+  ctx.fillText('FINAL STANDINGS', 84, 899);
   ctx.textAlign = 'right';
-  ctx.fillText(state.leaderboardView === 'raw' ? 'RAW POINTS' : 'POINTS', 996, 872);
+  ctx.fillText(state.leaderboardView === 'raw' ? 'RAW POINTS' : 'POINTS', 996, 899);
   ctx.textAlign = 'left';
 
   rows.forEach((row, index) => {
-    const rowY = 890 + index * 122;
+    const rowY = 916 + index * 91;
     if (index === 0) {
       ctx.fillStyle = lime;
-      roundRect(ctx, 70, rowY, 940, 108, 18);
+      roundRect(ctx, 70, rowY, 940, 82, 16);
       ctx.fill();
     } else if (index === 2) {
       ctx.strokeStyle = 'rgba(255,255,255,0.12)';
@@ -1328,40 +1329,40 @@ async function buildLeaderboardShareImage(standings) {
     const textColor = index === 0 ? ink : '#f5f7ff';
     ctx.fillStyle = index === 0 ? 'rgba(9,11,16,0.68)' : lime;
     ctx.font = '900 18px Inter, system-ui, sans-serif';
-    ctx.fillText(index === 0 ? '1ST' : index === 1 ? '2ND' : '3RD', 96, rowY + 42);
+    ctx.fillText(index === 0 ? '1ST' : index === 1 ? '2ND' : '3RD', 96, rowY + 33);
     ctx.fillStyle = textColor;
-    ctx.font = '800 30px Inter, system-ui, sans-serif';
-    drawCanvasText(ctx, state.players[row.playerIdx], 190, rowY + 45, 530);
+    ctx.font = '800 26px Inter, system-ui, sans-serif';
+    drawCanvasText(ctx, state.players[row.playerIdx], 190, rowY + 35, 530);
     ctx.fillStyle = index === 0 ? 'rgba(9,11,16,0.68)' : 'rgba(245,247,255,0.60)';
-    ctx.font = '700 15px Inter, system-ui, sans-serif';
-    ctx.fillText(`${row.played} MATCHES  ·  ${row.wins} WINS`, 192, rowY + 76);
+    ctx.font = '700 13px Inter, system-ui, sans-serif';
+    ctx.fillText(`${row.played} MATCHES  ·  ${row.wins} WINS`, 192, rowY + 61);
     ctx.textAlign = 'right';
     ctx.fillStyle = textColor;
-    ctx.font = '900 38px Inter, system-ui, sans-serif';
-    ctx.fillText(String(row.displayPoints), 968, rowY + 49);
+    ctx.font = '900 34px Inter, system-ui, sans-serif';
+    ctx.fillText(String(row.displayPoints), 968, rowY + 38);
     ctx.fillStyle = index === 0 ? 'rgba(9,11,16,0.68)' : 'rgba(245,247,255,0.60)';
-    ctx.font = '800 13px Inter, system-ui, sans-serif';
-    ctx.fillText('POINTS', 968, rowY + 76);
+    ctx.font = '800 11px Inter, system-ui, sans-serif';
+    ctx.fillText('POINTS', 968, rowY + 61);
     ctx.textAlign = 'left';
   });
 
   ctx.strokeStyle = 'rgba(255,255,255,0.14)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(72, 1254);
-  ctx.lineTo(1008, 1254);
+  ctx.moveTo(72, 1196);
+  ctx.lineTo(1008, 1196);
   ctx.stroke();
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = 'rgba(245,247,255,0.72)';
-  ctx.font = '700 16px Inter, system-ui, sans-serif';
-  ctx.fillText('Padel. Scored Properly.', 72, 1292);
+  ctx.font = '700 14px Inter, system-ui, sans-serif';
+  ctx.fillText('Padel. Scored Properly.', 72, 1242);
   if (brand) {
-    drawImageContain(ctx, brand, 838, 1262, 170, 42);
+    drawImageContain(ctx, brand, 838, 1205, 170, 38);
   } else {
     ctx.textAlign = 'right';
     ctx.fillStyle = '#fff';
-    ctx.font = '900 25px Inter, system-ui, sans-serif';
-    ctx.fillText('UMP1RE', 1008, 1292);
+    ctx.font = '900 23px Inter, system-ui, sans-serif';
+    ctx.fillText('UMP1RE', 1008, 1242);
   }
 
   return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
