@@ -3279,6 +3279,10 @@
     white-space: nowrap;
   }
 
+
+  .leaderboard-image-preview { padding: 0.25rem; }
+  .leaderboard-image-preview img { max-height: min(50vh, 480px); }
+  #leaderboard-modal .modal-body:has(.leaderboard-image-preview) { overflow: hidden; }
 </style>
 </head>
 <body>
@@ -3344,7 +3348,7 @@
   </div>
 </div>
 
-<script src="app.js?v=12" defer></script>
+<script src="app.js?v=13" defer></script>
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
