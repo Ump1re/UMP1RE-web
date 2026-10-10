@@ -1273,7 +1273,7 @@ async function buildLeaderboardShareImage(standings) {
     ctx.fillText(`${row.played} MATCHES  ·  ${row.wins} WINS`, 216, rowY + 47);
     ctx.fillStyle = textColor;
     ctx.font = '900 40px Inter, system-ui, sans-serif';
-    drawTabularScore(ctx, row.displayPoints, 956, rowY + 36, topThree);
+    drawTabularScore(ctx, row.displayPoints, 956, rowY + 36, rows);
   });
 
   ctx.strokeStyle = 'rgba(255,255,255,0.14)';
