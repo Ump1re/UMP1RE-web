@@ -842,14 +842,15 @@ function renderLeaderboardSharePreview(standings, fairnessAdjusted) {
   els['leaderboard-actions'].hidden = false;
   els['leaderboard-actions'].innerHTML = `
     <div class="leaderboard-share">
-      <div class="leaderboard-share-copy">Choose how you want to share it.</div>
+      <div class="leaderboard-share-copy">Share or save the finished image from your device’s share sheet.</div>
       <div class="leaderboard-share-actions">
         <button class="btn secondary" type="button" data-preview-back>Back to standings</button>
-        <button class="btn secondary" type="button" data-preview-whatsapp>WhatsApp text</button>
+        <button class="btn secondary" type="button" data-preview-replace-photo>Replace photo</button>
         <button class="btn primary" type="button" data-preview-share-image>Share image</button>
-        <button class="btn secondary" type="button" data-preview-download-image>Download image</button>
+        <button class="btn secondary" type="button" data-preview-save-image>Save image</button>
+        <input type="file" accept="image/*" data-preview-replace-photo-input hidden>
       </div>
-      <div class="leaderboard-share-status" data-share-status>Check the card, then choose a sharing option.</div>
+      <div class="leaderboard-share-status" data-share-status>Check the card, then share it or choose Save Image in the share sheet.</div>
     </div>
   `;
 
@@ -857,14 +858,24 @@ function renderLeaderboardSharePreview(standings, fairnessAdjusted) {
     clearLeaderboardPreview();
     renderLeaderboard();
   });
-  document.querySelector('[data-preview-whatsapp]')?.addEventListener('click', () => {
-    shareLeaderboardToWhatsApp(standings);
+  document.querySelector('[data-preview-replace-photo]')?.addEventListener('click', () => {
+    document.querySelector('[data-preview-replace-photo-input]')?.click();
+  });
+  document.querySelector('[data-preview-replace-photo-input]')?.addEventListener('change', async event => {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    try {
+      leaderboardSharePhoto = await loadLeaderboardSharePhoto(file);
+      openLeaderboardSharePreview(standings);
+    } catch (_) {
+      updateLeaderboardShareStatus('That photo could not be loaded. The current preview is unchanged.');
+    }
   });
   document.querySelector('[data-preview-share-image]')?.addEventListener('click', () => {
-    shareLeaderboardImageBlob(leaderboardPreviewBlob);
+    shareLeaderboardImageBlob(leaderboardPreviewBlob, 'share');
   });
-  document.querySelector('[data-preview-download-image]')?.addEventListener('click', () => {
-    downloadLeaderboardImage(leaderboardPreviewBlob);
+  document.querySelector('[data-preview-save-image]')?.addEventListener('click', () => {
+    shareLeaderboardImageBlob(leaderboardPreviewBlob, 'save');
   });
 }
 
@@ -1121,45 +1132,32 @@ function updateLeaderboardShareStatus(message) {
   if (status) status.textContent = message;
 }
 
-function buildLeaderboardShareText(standings) {
-  const lines = standings.slice(0, 3).map((row, idx) => (
-    `${idx + 1}. ${state.players[row.playerIdx]} - Played ${row.played}, Won ${row.wins}, Points ${row.points}`
-  ));
-  return [
-    'Americano top 3',
-    ...lines,
-  ].join('\n');
-}
-
-function shareLeaderboardToWhatsApp(standings) {
-  const text = buildLeaderboardShareText(standings);
-  updateLeaderboardShareStatus('Opening WhatsApp share...');
-  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
-}
-
-async function shareLeaderboardToInstagram(standings) {
-  updateLeaderboardShareStatus('Preparing image...');
-  try {
-    const blob = await buildLeaderboardShareImage(standings);
-    await shareLeaderboardImageBlob(blob);
-  } catch (_) {
-    updateLeaderboardShareStatus('Unable to prepare the image right now.');
+async function shareLeaderboardImageBlob(blob, intent = 'share') {
+  if (!blob) {
+    updateLeaderboardShareStatus('No preview image is available.');
+    return;
   }
-}
 
-async function shareLeaderboardImageBlob(blob) {
+  const file = new File([blob], 'americano-leaderboard.png', { type: blob.type || 'image/png' });
   try {
-    if (!blob) throw new Error('No share image available');
-    const file = new File([blob], 'americano-leaderboard.png', { type: 'image/png' });
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    const canShareFiles = navigator.share
+      && (!navigator.canShare || navigator.canShare({ files: [file] }));
+    if (canShareFiles) {
       await navigator.share({ title: 'Americano leaderboard', files: [file] });
-      updateLeaderboardShareStatus('Image ready to share.');
+      updateLeaderboardShareStatus(intent === 'save'
+        ? 'Choose Save Image (or the equivalent) in the share sheet to add it to your photos.'
+        : 'Choose an app in the share sheet to send the finished image.');
       return;
     }
+
     downloadLeaderboardImage(blob);
-    updateLeaderboardShareStatus('Image downloaded. Choose Instagram or another app to post it.');
-  } catch (_) {
-    updateLeaderboardShareStatus('Unable to share the image right now.');
+    updateLeaderboardShareStatus(intent === 'save'
+      ? 'This browser cannot save directly to Photos, so the image was downloaded instead.'
+      : 'This browser cannot share images directly, so the image was downloaded instead.');
+  } catch (error) {
+    updateLeaderboardShareStatus(error?.name === 'AbortError'
+      ? 'Share cancelled.'
+      : 'Unable to open the share sheet right now.');
   }
 }
 
