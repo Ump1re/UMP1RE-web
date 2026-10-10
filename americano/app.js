@@ -899,7 +899,7 @@ function bindLeaderboardViewActions() {
 function openLeaderboardCamera(standings) {
   if (!navigator.mediaDevices?.getUserMedia) {
     updateLeaderboardShareStatus('Camera preview is unavailable here. Choose a photo from your library instead.');
-    document.querySelector('[data-share-photo-input]')?.click();
+    (document.querySelector('[data-camera-library-input]') || document.querySelector('[data-share-photo-input]'))?.click();
     return;
   }
 
@@ -935,7 +935,7 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
   els['leaderboard-subtitle'].textContent = `Camera viewfinder · ${subtitle}`;
   els['leaderboard-body'].innerHTML = `
     <div class="social-camera-viewfinder">
-      <video data-social-camera autoplay muted playsinline aria-label="Live camera preview" style="transform: scale(${leaderboardCameraZoom})"></video>
+      ${leaderboardCameraActive ? `<video data-social-camera autoplay muted playsinline aria-label="Live camera preview" style="transform: scale(${leaderboardCameraZoom})"></video>` : ''}
       <div class="social-camera-shade"></div>
       ${leaderboardClubLogo
         ? `<div class="social-camera-club"><img src="${leaderboardClubLogo._shareObjectUrl}" alt="Club logo"></div>`
@@ -970,7 +970,7 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
   els['leaderboard-actions'].innerHTML = `
     <div class="leaderboard-share">
       <div class="social-action-toolbar">
-        <span class="social-labelled-action"><button class="social-icon-btn social-icon-btn-primary" type="button" data-camera-capture aria-label="Take photo" title="Take photo">${socialIcon('camera')}</button><span class="social-button-label">Capture</span></span>
+        <span class="social-labelled-action"><button class="social-icon-btn social-icon-btn-primary" type="button" data-camera-capture aria-label="Take photo" title="Take photo">${socialIcon('camera')}</button><span class="social-button-label">${leaderboardCameraActive ? 'Capture' : 'Camera'}</span></span>
         <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-library aria-label="Choose from library" title="Choose from library">${socialIcon('gallery')}</button><span class="social-button-label">Gallery</span></span>
         <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-logo aria-label="Add or change club logo" title="Add or change club logo">${socialIcon('logo')}</button><span class="social-button-label">Club logo</span></span>
         <label class="camera-zoom-control" aria-label="Camera zoom"><span>−</span><input type="range" min="1" max="3" step="0.1" value="${leaderboardCameraZoom}" data-camera-zoom aria-label="Zoom"><span>+</span></label>
@@ -989,7 +989,8 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
   }
 
   document.querySelector('[data-camera-capture]')?.addEventListener('click', () => {
-    captureLeaderboardCameraPhoto(standings, video);
+    if (!leaderboardCameraActive) openLeaderboardCamera(standings);
+    else captureLeaderboardCameraPhoto(standings, video);
   });
   const zoomControl = document.querySelector('[data-camera-zoom]');
   zoomControl?.addEventListener('input', () => {
@@ -1090,7 +1091,7 @@ function bindLeaderboardShareActions(standings) {
   document.querySelector('[data-preview-leaderboard]')?.addEventListener('click', () => {
     leaderboardComposerActive = true;
     if (leaderboardSharePhoto) openLeaderboardSharePreview(standings);
-    else openLeaderboardCamera(standings);
+    else renderLeaderboard();
   });
   const photoInput = document.querySelector('[data-share-photo-input]');
   photoInput?.addEventListener('change', async event => {
