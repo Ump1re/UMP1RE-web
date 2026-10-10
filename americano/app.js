@@ -400,7 +400,6 @@ function renderSetupWizardPage() {
         <div class="play-card">
           <div class="setup-modal-head">
             ${renderCardBrand()}
-            <div class="setup-kicker">Setup</div>
             <h2>${escapeHtml(step.title)}</h2>
             <p>${escapeHtml(step.copy)}</p>
             <div class="setup-stepper" aria-label="Setup progress">
