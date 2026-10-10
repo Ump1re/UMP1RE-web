@@ -905,6 +905,7 @@ async function buildLeaderboardShareImage(standings) {
   ctx.restore();
 
   // Use the supplied Ump1re wordmark, with a text fallback if it cannot load.
+  if (document.fonts?.load) await document.fonts.load('76px TimesSquare');
   const logo = await new Promise(resolve => {
     const image = new Image();
     image.onload = () => resolve(image);
@@ -930,7 +931,7 @@ async function buildLeaderboardShareImage(standings) {
 
   ctx.textAlign = 'left';
   ctx.fillStyle = '#f5f7ff';
-  ctx.font = '900 76px Inter, system-ui, sans-serif';
+  ctx.font = '76px TimesSquare, Inter, system-ui, sans-serif';
   ctx.fillText('AMERICANO', 72, 220);
   ctx.fillStyle = muted;
   ctx.font = '600 21px Inter, system-ui, sans-serif';
@@ -951,7 +952,7 @@ async function buildLeaderboardShareImage(standings) {
   ctx.textAlign = 'left';
   ctx.fillStyle = 'rgba(9,11,16,0.66)';
   ctx.font = '900 18px Inter, system-ui, sans-serif';
-  ctx.fillText('🏆  AMERICANO CHAMPION', 112, 335);
+  ctx.fillText('TOURNAMENT WINNER', 112, 335);
 
   ctx.fillStyle = ink;
   ctx.font = '900 58px Inter, system-ui, sans-serif';
