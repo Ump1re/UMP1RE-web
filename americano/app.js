@@ -58,6 +58,7 @@ const state = {
   pointsPerGame: DEFAULT_CONFIG.pointOptions[0],
   rotations: DEFAULT_CONFIG.rotationOptions[0],
   players: [],
+  playerPhotos: [],
   schedule: [],
   fixtures: [],
   scores: [],
@@ -90,6 +91,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initDefaults();
   bindEvents();
   render();
+  loadPlayerPhotos();
 });
 
 function cacheElements() {
@@ -164,6 +166,87 @@ function applyConfigDefaults() {
 
 function pickConfiguredValue(value, options) {
   return options.includes(value) ? value : options[0];
+}
+
+
+const PHOTO_DB = 'ump1re-americano-portraits';
+let portraitRevision = 0;
+
+function portraitTransaction(mode, operation) {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) return reject(new Error('IndexedDB unavailable'));
+    const opening = indexedDB.open(PHOTO_DB, 1);
+    opening.onupgradeneeded = () => opening.result.createObjectStore('photos');
+    opening.onerror = () => reject(opening.error);
+    opening.onsuccess = () => {
+      const db = opening.result;
+      const tx = db.transaction('photos', mode);
+      const request = operation(tx.objectStore('photos'));
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+      tx.oncomplete = () => db.close();
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    };
+  });
+}
+
+async function loadPlayerPhotos() {
+  const revision = portraitRevision;
+  try {
+    const stored = await portraitTransaction('readonly', store => store.get('current'));
+    if (revision !== portraitRevision) return;
+    state.playerPhotos = Array.isArray(stored) ? stored.slice(0, state.numPlayers) : [];
+    render();
+  } catch (error) {
+    console.warn('Local portraits unavailable', error);
+  }
+}
+
+async function savePlayerPhotos() {
+  try {
+    await portraitTransaction('readwrite', store => store.put(state.playerPhotos.slice(), 'current'));
+  } catch (error) {
+    console.warn('Unable to store player portraits', error);
+  }
+}
+
+async function clearPlayerPhotos() {
+  portraitRevision++;
+  state.playerPhotos = [];
+  try {
+    await portraitTransaction('readwrite', store => store.delete('current'));
+  } catch (error) {
+    console.warn('Unable to clear player portraits', error);
+  }
+}
+
+function playerAvatar(index) {
+  const name = state.players[index] || 'Player ' + (index + 1);
+  const initials = name.trim().split(/\s+/).slice(0, 2).map(part => part[0] || '').join('').toUpperCase();
+  const photo = state.playerPhotos[index];
+  return '<span class="player-avatar" aria-hidden="true">' +
+    (photo ? '<img src="' + photo + '" alt="">' : escapeHtml(initials || String(index + 1))) +
+    '</span>';
+}
+
+function playerWithAvatar(index) {
+  return '<span class="fixture-player">' + playerAvatar(index) +
+    '<span>' + escapeHtml(state.players[index] || 'Player ' + (index + 1)) + '</span></span>';
+}
+
+async function compressPlayerPhoto(file) {
+  if (!file.type.startsWith('image/')) throw new Error('Choose a photo.');
+  const bitmap = await createImageBitmap(file);
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 160;
+    const ctx = canvas.getContext('2d');
+    const crop = Math.min(bitmap.width, bitmap.height);
+    ctx.drawImage(bitmap, (bitmap.width - crop) / 2, (bitmap.height - crop) / 2, crop, crop, 0, 0, 160, 160);
+    return canvas.toDataURL('image/jpeg', 0.72);
+  } finally {
+    bitmap.close();
+  }
 }
 
 const GAME_STORAGE_KEY = 'ump1re-americano-game-v1';
@@ -399,6 +482,7 @@ function confirmSkipRound() {
 }
 
 function resetTournament() {
+  clearPlayerPhotos();
   state.numPlayers = config.playerOptions[0];
   state.courts = config.courtOptions[0];
   state.pointsPerGame = config.pointOptions[0];
@@ -621,6 +705,10 @@ function renderSetupNamesPage() {
   const players = state.players.map((name, i) => `
     <div class="player-row">
       <div class="player-index">Player ${i + 1}</div>
+      <label class="player-photo-picker" title="Add player photo">
+        ${playerAvatar(i)}<span class="player-photo-badge" aria-hidden="true">+</span>
+        <input type="file" accept="image/*" data-player-photo="${i}" aria-label="Take or choose a photo for player ${i + 1}">
+      </label>
       <input type="text" maxlength="24" value="${escapeHtml(name)}" data-player-index="${i}" aria-label="Player ${i + 1} name">
     </div>
   `).join('');
@@ -732,20 +820,20 @@ function renderRoundOverviewPage(roundIndex = 0) {
   const roundLabel = `Round ${safeRoundIndex + 1}/${state.schedule.length}`;
   const roundFixtures = state.fixtures.filter((fixture) => fixture.roundIndex === safeRoundIndex);
   const fixtureCols = Math.max(1, Math.min(3, roundFixtures.length || 1));
-  const sit = round.sitOut.length ? round.sitOut.map(i => state.players[i]).join(', ') : '';
+  const sit = round.sitOut.length ? round.sitOut.map(playerWithAvatar).join('') : '';
   const isFirstRound = safeRoundIndex === 0;
 
   const fixtureCards = roundFixtures.map((fixture) => {
     const saved = state.scores[fixture.fixtureIndex];
-    const teamA = teamLabel(fixture.match.a, ' & ');
-    const teamB = teamLabel(fixture.match.b, ' & ');
+    const teamA = fixture.match.a.map(playerWithAvatar).join('');
+    const teamB = fixture.match.b.map(playerWithAvatar).join('');
     return `
       <button class="schedule-item fixture-card ${saved ? 'completed' : ''}" type="button" data-open-fixture="${fixture.fixtureIndex}">
         <div class="fixture-card-court">Court ${fixture.courtIndex + 1}</div>
         <div class="fixture-card-match">
-          <div class="fixture-card-team team-a">${escapeHtml(teamA)}</div>
+          <div class="fixture-card-team team-a">${teamA}</div>
           <div class="fixture-card-vs">vs</div>
-          <div class="fixture-card-team team-b">${escapeHtml(teamB)}</div>
+          <div class="fixture-card-team team-b">${teamB}</div>
           ${saved ? `
           <div class="fixture-card-score-value a">${saved.scoreA}</div>
           <div class="fixture-card-score-separator">:</div>
@@ -777,7 +865,7 @@ function renderRoundOverviewPage(roundIndex = 0) {
             ${sit ? `
             <div class="round-sitout-card">
               <div class="round-sitout-label">Sitting out</div>
-              <div class="round-sitout-value">${escapeHtml(sit)}</div>
+              <div class="round-sitout-value">${sit}</div>
             </div>
             ` : ''}
             <div class="round-leaderboard-cta">
@@ -1574,11 +1662,31 @@ function attachPageHandlers() {
     });
   });
 
+  document.querySelectorAll('input[data-player-photo]').forEach(input => {
+    input.addEventListener('change', async () => {
+      const index = Number(input.dataset.playerPhoto);
+      const file = input.files && input.files[0];
+      if (!file || !Number.isInteger(index) || index >= state.numPlayers) return;
+      const revision = portraitRevision;
+      try {
+        const photo = await compressPlayerPhoto(file);
+        if (revision !== portraitRevision) return;
+        state.playerPhotos[index] = photo;
+        await savePlayerPhotos();
+        render();
+      } catch (error) {
+        alert(error.message || 'Unable to use photo.');
+      }
+    });
+  });
+
   document.querySelectorAll('[data-player-choice]').forEach(btn => {
     btn.addEventListener('click', () => {
       const nextCount = Number(btn.dataset.playerChoice);
       if (nextCount === state.numPlayers) return;
       state.numPlayers = nextCount;
+      state.playerPhotos = state.playerPhotos.slice(0, nextCount);
+      savePlayerPhotos();
       state.players = Array.from({ length: state.numPlayers }, (_, i) => state.players[i] ?? `Player ${i + 1}`);
       state.schedule = [];
       state.fixtures = [];
