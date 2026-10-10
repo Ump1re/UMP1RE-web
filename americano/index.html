@@ -3379,6 +3379,23 @@
     text-align: center;
   }
   .pwa-install-hint[hidden] { display: none; }
+
+  #leaderboard-modal .modal-card:has(.social-camera-viewfinder) {
+    height: min(92dvh, 900px);
+    max-height: none;
+  }
+  #leaderboard-modal .modal-body:has(.social-camera-viewfinder) {
+    grid-template-rows: minmax(0, 1fr);
+    place-items: center;
+    overflow: hidden;
+  }
+  #leaderboard-modal .social-camera-viewfinder {
+    width: auto;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: 4 / 5;
+  }
 </style>
 </head>
 <body>
