@@ -1138,9 +1138,7 @@ async function shareLeaderboardImageBlob(blob, intent = 'share') {
       && (!navigator.canShare || navigator.canShare({ files: [file] }));
     if (canShareFiles) {
       await navigator.share({ title: 'Americano leaderboard', files: [file] });
-      updateLeaderboardShareStatus(intent === 'save'
-        ? 'Choose Save Image (or the equivalent) in the share sheet to add it to your photos.'
-        : 'Choose an app in the share sheet to send the finished image.');
+      updateLeaderboardShareStatus('');
       return;
     }
 
