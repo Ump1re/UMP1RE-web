@@ -3435,6 +3435,20 @@
     object-fit: contain;
     pointer-events: none;
   }
+
+  .player-avatar { display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 40px;border-radius:50%;overflow:hidden;border:2px solid var(--lime);background:#363942;color:var(--lime);font:800 12px var(--body); }
+  .player-avatar img { width:100%;height:100%;object-fit:cover;display:block; }
+  .player-photo-picker { position:relative;display:inline-flex;cursor:pointer;flex:0 0 auto; }
+  .player-photo-picker input { position:absolute;width:1px;height:1px;opacity:0; }
+  .player-photo-picker:focus-within .player-avatar { outline:2px solid white;outline-offset:2px; }
+  .player-photo-badge { position:absolute;right:-3px;bottom:-3px;display:grid;place-items:center;width:17px;height:17px;border-radius:50%;background:var(--lime);color:#24262e;font:800 14px var(--body); }
+  .player-row { align-items:center; }
+  .fixture-player { display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%; }
+  .fixture-player > span:last-child { min-width:0;overflow-wrap:anywhere; }
+  .fixture-card-team { display:flex;flex-direction:column;align-items:flex-start;gap:5px; }
+  .round-sitout-value { display:flex;gap:8px;flex-wrap:wrap; }
+  @media(max-width:420px) { .fixture-card .player-avatar { width:32px;height:32px;flex-basis:32px;font-size:10px; } .fixture-player { gap:4px; } }
+
 </style>
 </head>
 <body>
@@ -3500,7 +3514,7 @@
   </div>
 </div>
 
-<script src="app.js?v=38" defer></script>
+<script src="app.js?v=39" defer></script>
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
