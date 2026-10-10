@@ -1658,7 +1658,7 @@ function attachPageHandlers() {
 
 function buildTournament() {
   state.schedule = buildAmericanoSchedule(state.numPlayers, state.rotations, state.courts);
-  state.fixtures = buildFixtureOrder(state.schedule);
+  state.fixtures = buildFixtureOrder(state.schedule, state.courts);
   state.scores = Array.from({ length: state.fixtures.length }, () => null);
   state.drafts = new Map();
   state.fixtures.forEach((_, fixtureIdx) => {
@@ -1949,22 +1949,77 @@ function gcd(a, b) {
   return x || 1;
 }
 
-function buildFixtureOrder(schedule) {
+function buildFixtureOrder(schedule, configuredCourts = state.courts) {
   const fixtures = [];
+  const maxMatchesInRound = Math.max(1, ...schedule.map(round => (round.matches || []).length));
+  const courtCount = Math.max(1, configuredCourts, maxMatchesInRound);
+  const courtUse = Array.from({ length: state.numPlayers }, () => Array(courtCount).fill(0));
+  const lastCourt = Array(state.numPlayers).fill(-1);
+
   schedule.forEach((round, roundIndex) => {
-    (round.matches || []).forEach((match, matchIndex) => {
+    const matches = round.matches || [];
+    if (!matches.length) return;
+    const assignments = chooseRoundCourts(matches, courtCount, courtUse, lastCourt, roundIndex);
+
+    matches.forEach((match, matchIndex) => {
+      const courtIndex = assignments[matchIndex];
+      const players = [...match.a, ...match.b];
+      players.forEach(playerIndex => {
+        if (!courtUse[playerIndex]) return;
+        courtUse[playerIndex][courtIndex] += 1;
+        lastCourt[playerIndex] = courtIndex;
+      });
       fixtures.push({
         fixtureIndex: fixtures.length,
         roundIndex,
         matchIndex,
-        courtIndex: matchIndex,
-        courtCount: round.matches.length,
+        courtIndex,
+        courtCount,
         round,
         match,
       });
     });
   });
   return fixtures;
+}
+
+function chooseRoundCourts(matches, courtCount, courtUse, lastCourt, roundIndex) {
+  let bestAssignment = null;
+  let bestCost = Infinity;
+  const assignment = [];
+  const usedCourts = new Set();
+
+  function search(matchIndex, cost) {
+    if (matchIndex === matches.length) {
+      if (cost < bestCost) {
+        bestCost = cost;
+        bestAssignment = [...assignment];
+      }
+      return;
+    }
+
+    const preferredCourt = (matchIndex + roundIndex) % courtCount;
+    for (let offset = 0; offset < courtCount; offset += 1) {
+      const court = (preferredCourt + offset) % courtCount;
+      if (usedCourts.has(court)) continue;
+
+      const players = [...matches[matchIndex].a, ...matches[matchIndex].b];
+      let addedCost = 0;
+      players.forEach(playerIndex => {
+        const uses = courtUse[playerIndex]?.[court] || 0;
+        addedCost += (2 * uses) + 1;
+        if (lastCourt[playerIndex] === court) addedCost += 0.25;
+      });
+
+      assignment[matchIndex] = court;
+      usedCourts.add(court);
+      search(matchIndex + 1, cost + addedCost);
+      usedCourts.delete(court);
+    }
+  }
+
+  search(0, 0);
+  return bestAssignment || matches.map((_, matchIndex) => matchIndex % courtCount);
 }
 
 function fixtureLabel(fixture) {
