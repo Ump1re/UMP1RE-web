@@ -3495,6 +3495,28 @@
     .fixture-card .fixture-player-name { font-size: 9px; }
   }
 
+
+  /* Mirror the opposing team: name on the inside, portrait on the outside. */
+  .fixture-card .fixture-card-team.team-b { align-items: stretch; }
+  .fixture-card .fixture-card-team.team-b .fixture-player {
+    flex-direction: row-reverse;
+    text-align: right;
+    justify-content: flex-start;
+  }
+  .fixture-card .fixture-card-team.team-a .fixture-player {
+    flex-direction: row;
+    text-align: left;
+    justify-content: flex-start;
+  }
+  .fixture-card .fixture-card-team {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .fixture-card .fixture-player-name { flex: 1 1 auto; width: auto; }
+  .fixture-card .fixture-player .player-avatar { flex-shrink: 0; }
+
 </style>
 </head>
 <body>
