@@ -544,21 +544,38 @@
   }
 
   .setup-step-dot {
+    position: relative;
     width: 2rem;
     height: 2rem;
+    padding: 0;
+    border: 0;
     border-radius: 999px;
-    border: 1px solid var(--line);
-    background: rgba(255,255,255,0.03);
-    color: var(--dim);
+    background: transparent;
     cursor: pointer;
-    font-size: 0.68rem;
-    font-weight: 800;
+    font-size: 0;
   }
 
-  .setup-step-dot.active {
-    border-color: transparent;
+  .setup-step-dot::before {
+    content: '';
+    position: absolute;
+    width: 0.5rem;
+    height: 0.5rem;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+  }
+
+  .setup-step-dot.active::before {
+    border-color: var(--lime);
     background: var(--lime);
-    color: #24262e;
+  }
+
+  .setup-step-dot:focus-visible {
+    outline: 2px solid rgba(217,255,51,0.45);
+    outline-offset: -2px;
   }
 
   .setup-modal-body {
