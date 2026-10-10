@@ -803,7 +803,7 @@ function renderLeaderboard() {
             <input type="file" accept="image/*" data-share-photo-input hidden>
             <input type="file" accept="image/*" data-share-club-logo-input hidden>
           </div>
-          <div class="leaderboard-share-status" data-share-status>Use the camera or gallery icon to add your photo. Add a club logo if you like.</div>
+          <div class="leaderboard-share-status" data-share-status aria-live="polite"></div>
         </div>
       `;
     }
