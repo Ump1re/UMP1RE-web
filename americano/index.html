@@ -3260,6 +3260,25 @@
       user-select: none;
     }
   }
+  .social-labelled-action {
+    display: inline-flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.22rem;
+    min-width: 3.25rem;
+  }
+
+  .social-button-label {
+    color: var(--muted);
+    font-size: 0.58rem;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+  }
+
 </style>
 </head>
 <body>
@@ -3325,7 +3344,7 @@
   </div>
 </div>
 
-<script src="app.js?v=11" defer></script>
+<script src="app.js?v=12" defer></script>
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
