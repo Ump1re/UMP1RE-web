@@ -78,6 +78,7 @@ let leaderboardClubLogo = null;
 let leaderboardComposerActive = false;
 let leaderboardPhotoCrop = { scale: 1, offsetX: 0, offsetY: 0 };
 let leaderboardPreparedShareBlob = null;
+let leaderboardCompositePreviewUrl = null;
 let leaderboardShareBuildId = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -297,6 +298,8 @@ function closeLeaderboard() {
   leaderboardComposerActive = false;
   leaderboardShareBuildId += 1;
   leaderboardPreparedShareBlob = null;
+  if (leaderboardCompositePreviewUrl) URL.revokeObjectURL(leaderboardCompositePreviewUrl);
+  leaderboardCompositePreviewUrl = null;
   const returnFocus = document.querySelector('[data-action="leaderboard"]');
   if (document.activeElement && typeof document.activeElement.blur === 'function') {
     document.activeElement.blur();
@@ -907,35 +910,7 @@ function renderLeaderboardComposer(standings) {
   els['leaderboard-subtitle'].textContent = '';
   els['leaderboard-body'].innerHTML = `
     <div class="social-camera-viewfinder ${leaderboardSharePhoto ? 'has-photo' : ''}" data-social-crop-frame>
-      ${leaderboardSharePhoto ? `<img class="social-camera-photo" data-social-crop-photo src="${leaderboardSharePhoto._shareObjectUrl}" alt="">` : ''}
-      <div class="social-camera-shade"></div>
-      ${leaderboardClubLogo
-        ? `<div class="social-camera-club"><img src="${leaderboardClubLogo._shareObjectUrl}" alt="Club logo"></div>`
-        : ''}
-      <div class="social-camera-scoreboard">
-        <div class="social-camera-winner-title">
-          <span>Americano</span>
-          <strong>Winner</strong>
-        </div>
-        <div class="social-camera-scoreboard-head">
-          <span>Final standings</span>
-          <span>Points</span>
-        </div>
-        ${topThree.map((row) => `
-          <div class="social-camera-score-row ${row.rank === 1 ? 'is-winner' : ''}">
-            <span class="social-camera-rank">${formatLeaderboardRank(row.rank)}</span>
-            <span class="social-camera-player">
-              <strong>${escapeHtml(state.players[row.playerIdx])}</strong>
-              <small>${row.played} matches · ${row.wins} wins</small>
-            </span>
-            <strong class="social-camera-points">${state.leaderboardView === 'raw' ? row.rawPoints : row.points}</strong>
-          </div>
-        `).join('')}
-        <div class="social-camera-score-footer">
-          <img src="/assets/UMP1RE_Logo.svg" alt="Ump1re">
-          <span>Padel. Scored Properly.</span>
-        </div>
-      </div>
+      <img class="social-camera-composite-preview" data-social-composite-preview alt="Leaderboard social post">
     </div>
   `;
   els['leaderboard-actions'].hidden = false;
@@ -989,18 +964,12 @@ function renderLeaderboardComposer(standings) {
 
 function bindSocialCropGestures(standings) {
   const frame = document.querySelector('[data-social-crop-frame]');
-  const photo = frame?.querySelector('[data-social-crop-photo]');
-  if (!frame || !photo) return;
+  if (!frame || !leaderboardSharePhoto) return;
 
   const pointers = new Map();
   let gesture = null;
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const distance = points => Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
-  const applyTransform = () => {
-    const overflowX = frame.clientWidth * (leaderboardPhotoCrop.scale - 1) / 2;
-    const overflowY = frame.clientHeight * (leaderboardPhotoCrop.scale - 1) / 2;
-    photo.style.transform = `translate3d(${-leaderboardPhotoCrop.offsetX * overflowX}px, ${-leaderboardPhotoCrop.offsetY * overflowY}px, 0) scale(${leaderboardPhotoCrop.scale})`;
-  };
   const beginGesture = () => {
     const points = Array.from(pointers.values());
     if (points.length >= 2) {
@@ -1046,7 +1015,6 @@ function bindSocialCropGestures(standings) {
       leaderboardPhotoCrop.offsetX = overflowX > 0 ? clamp(gesture.offsetX - (point.x - gesture.x) / overflowX, -1, 1) : 0;
       leaderboardPhotoCrop.offsetY = overflowY > 0 ? clamp(gesture.offsetY - (point.y - gesture.y) / overflowY, -1, 1) : 0;
     }
-    applyTransform();
   });
   const endPointer = event => {
     if (!pointers.has(event.pointerId)) return;
@@ -1056,7 +1024,6 @@ function bindSocialCropGestures(standings) {
   };
   frame.addEventListener('pointerup', endPointer);
   frame.addEventListener('pointercancel', endPointer);
-  applyTransform();
 }
 
 function prepareLeaderboardShareImage(standings) {
@@ -1068,6 +1035,13 @@ function prepareLeaderboardShareImage(standings) {
     if (buildId !== leaderboardShareBuildId || !leaderboardComposerActive) return;
     if (!blob) throw new Error('No share image available');
     leaderboardPreparedShareBlob = blob;
+    const preview = document.querySelector('[data-social-composite-preview]');
+    if (preview) {
+      const nextPreviewUrl = URL.createObjectURL(blob);
+      preview.src = nextPreviewUrl;
+      if (leaderboardCompositePreviewUrl) URL.revokeObjectURL(leaderboardCompositePreviewUrl);
+      leaderboardCompositePreviewUrl = nextPreviewUrl;
+    }
     const currentButton = document.querySelector('[data-social-share]');
     if (currentButton) currentButton.disabled = false;
   }).catch(() => {
