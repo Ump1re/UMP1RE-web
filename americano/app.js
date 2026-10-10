@@ -76,6 +76,7 @@ const els = {};
 let leaderboardSharePhoto = null;
 let leaderboardClubLogo = null;
 let leaderboardCameraActive = false;
+let leaderboardComposerActive = false;
 let leaderboardCameraStream = null;
 let leaderboardCameraZoom = 1;
 let leaderboardPreviewActive = false;
@@ -217,6 +218,7 @@ function openLeaderboard() {
 }
 
 function closeLeaderboard() {
+  leaderboardComposerActive = false;
   const returnFocus = document.querySelector('[data-action="leaderboard"]');
   if (document.activeElement && typeof document.activeElement.blur === 'function') {
     document.activeElement.blur();
@@ -332,6 +334,7 @@ function resetTournament() {
   leaderboardClubLogo = null;
   stopLeaderboardCamera();
   clearLeaderboardPreview();
+  leaderboardComposerActive = false;
   render();
 }
 
@@ -718,12 +721,9 @@ function renderLeaderboard() {
   if (!showPointsToggle) state.leaderboardView = 'raw';
   const displayedPoints = row => state.leaderboardView === 'raw' ? row.rawPoints : row.points;
 
-  if (leaderboardCameraActive) {
-    renderLeaderboardCamera(standings, fairnessAdjusted);
-    return;
-  }
-  if (leaderboardPreviewActive) {
-    renderLeaderboardSharePreview(standings, fairnessAdjusted);
+  if (leaderboardComposerActive || leaderboardCameraActive || leaderboardPreviewActive) {
+    if (leaderboardPreviewActive) renderLeaderboardSharePreview(standings, fairnessAdjusted);
+    else renderLeaderboardCamera(standings, fairnessAdjusted);
     return;
   }
 
@@ -787,23 +787,8 @@ function renderLeaderboard() {
       els['leaderboard-actions'].hidden = false;
       els['leaderboard-actions'].innerHTML = `
         <div class="leaderboard-share">
-          <div class="leaderboard-share-copy">Compose your Americano social post.</div>
-          <div class="social-action-toolbar social-compose-toolbar">
-            <button class="btn primary social-create-button" type="button" data-preview-leaderboard>${socialIcon('share')}<span>Create Social Post</span></button>
-            <button class="social-icon-btn" type="button" data-team-camera aria-label="${leaderboardSharePhoto ? 'Retake the team photo' : 'Take a team photo'}" title="${leaderboardSharePhoto ? 'Retake the team photo' : 'Take a team photo'}">${socialIcon('camera')}</button>
-            <span class="social-icon-control">
-              <button class="social-icon-btn" type="button" data-share-photo aria-label="${leaderboardSharePhoto ? 'Replace photo' : 'Choose a photo'}" title="${leaderboardSharePhoto ? 'Replace photo' : 'Choose a photo'}">${leaderboardSharePhoto? `<img src="${leaderboardSharePhoto._shareObjectUrl}" alt="">`:socialIcon('gallery')}</button>
-              ${leaderboardSharePhoto ? `<button class="social-icon-clear" type="button" data-remove-share-photo aria-label="Remove team photo" title="Remove team photo">${socialIcon('close')}</button>` : ''}
-            </span>
-            <span class="social-icon-control">
-              <button class="social-icon-btn social-icon-btn-logo" type="button" data-share-club-logo aria-label="${leaderboardClubLogo ? 'Change club logo' : 'Add club logo'}" title="${leaderboardClubLogo ? 'Change club logo' : 'Add club logo'}">${leaderboardClubLogo ? `<img src="${leaderboardClubLogo._shareObjectUrl}" alt="">` : socialIcon('logo')}</button>
-              <span class="social-icon-label">Club logo</span>
-              ${leaderboardClubLogo ? `<button class="social-icon-clear" type="button" data-remove-club-logo aria-label="Remove club logo" title="Remove club logo">${socialIcon('close')}</button>` : ''}
-            </span>
-            <input type="file" accept="image/*" data-share-photo-input hidden>
-            <input type="file" accept="image/*" data-share-club-logo-input hidden>
-          </div>
-          <div class="leaderboard-share-status" data-share-status aria-live="polite"></div>
+          <button class="btn primary social-create-button" type="button" data-preview-leaderboard>${socialIcon('share')}<span>Create Social Post</span></button>
+          <input type="file" accept="image/*" data-share-photo-input hidden>
         </div>
       `;
     }
@@ -823,6 +808,7 @@ function openLeaderboardSharePreview(standings) {
       leaderboardPreviewBlob = blob;
       leaderboardPreviewUrl = URL.createObjectURL(blob);
       leaderboardPreviewActive = true;
+      leaderboardComposerActive = true;
       renderLeaderboard();
     })
     .catch(() => updateLeaderboardShareStatus('Unable to prepare the preview right now.'));
@@ -841,19 +827,21 @@ function renderLeaderboardSharePreview(standings, fairnessAdjusted) {
   els['leaderboard-subtitle'].textContent = `Preview image · 1080 × 1350${fairnessAdjusted ? ' · ' + (state.leaderboardView === 'raw' ? 'raw points' : 'adjusted points') : ''}`;
   els['leaderboard-body'].innerHTML = `
     <div class="leaderboard-image-preview">
-      <img src="${leaderboardPreviewUrl}" alt="Preview of the Americano final leaderboard share image">
+      <img src="${leaderboardPreviewUrl}" alt="Preview of the Americano final leaderboard share image" class="social-camera-rendered-image">
     </div>
   `;
   if (!els['leaderboard-actions']) return;
   els['leaderboard-actions'].hidden = false;
   els['leaderboard-actions'].innerHTML = `
     <div class="leaderboard-share">
-      <div class="leaderboard-share-copy">Share or save the finished image from your device’s share sheet.</div>
       <div class="social-action-toolbar social-preview-toolbar">
         <button class="social-icon-btn" type="button" data-preview-back aria-label="Back to standings" title="Back to standings">${socialIcon('back')}</button>
+        <button class="social-icon-btn" type="button" data-preview-camera aria-label="Take a new photo" title="Take a new photo">${socialIcon('camera')}</button>
+        <button class="social-icon-btn social-icon-btn-logo" type="button" data-preview-logo aria-label="Add or change club logo" title="Add or change club logo">${socialIcon('logo')}</button>
         <button class="social-icon-btn" type="button" data-preview-replace-photo aria-label="Replace photo" title="Replace photo">${socialIcon('gallery')}</button>
         <button class="social-icon-btn social-icon-btn-primary" type="button" data-preview-share-image aria-label="Share image" title="Share image">${socialIcon('share')}</button>
         <input type="file" accept="image/*" data-preview-replace-photo-input hidden>
+        <input type="file" accept="image/*" data-preview-logo-input hidden>
       </div>
       <div class="leaderboard-share-status" data-share-status>Check the card, then share it or choose Save Image in the share sheet.</div>
     </div>
@@ -861,7 +849,21 @@ function renderLeaderboardSharePreview(standings, fairnessAdjusted) {
 
   document.querySelector('[data-preview-back]')?.addEventListener('click', () => {
     clearLeaderboardPreview();
+    leaderboardComposerActive = false;
     renderLeaderboard();
+  });
+  document.querySelector('[data-preview-camera]')?.addEventListener('click', () => openLeaderboardCamera(standings));
+  const logoInput = document.querySelector('[data-preview-logo-input]');
+  document.querySelector('[data-preview-logo]')?.addEventListener('click', () => logoInput?.click());
+  logoInput?.addEventListener('change', async event => {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    try {
+      const logo = await loadLeaderboardSharePhoto(file, true);
+      releaseLeaderboardImage(leaderboardClubLogo);
+      leaderboardClubLogo = logo;
+      openLeaderboardSharePreview(standings);
+    } catch (_) { updateLeaderboardShareStatus('That club logo could not be loaded.'); }
   });
   document.querySelector('[data-preview-replace-photo]')?.addEventListener('click', () => {
     document.querySelector('[data-preview-replace-photo-input]')?.click();
@@ -901,6 +903,8 @@ function openLeaderboardCamera(standings) {
     return;
   }
 
+  clearLeaderboardPreview();
+  leaderboardComposerActive = true;
   stopLeaderboardCamera();
   navigator.mediaDevices.getUserMedia({
     audio: false,
@@ -968,9 +972,11 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
       <div class="social-action-toolbar">
         <button class="social-icon-btn social-icon-btn-primary" type="button" data-camera-capture aria-label="Take photo" title="Take photo">${socialIcon('camera')}</button>
         <button class="social-icon-btn" type="button" data-camera-library aria-label="Choose from library" title="Choose from library">${socialIcon('gallery')}</button>
+        <button class="social-icon-btn" type="button" data-camera-logo aria-label="Add or change club logo" title="Add or change club logo">${socialIcon('logo')}</button>
         <label class="camera-zoom-control" aria-label="Camera zoom"><span>−</span><input type="range" min="1" max="3" step="0.1" value="${leaderboardCameraZoom}" data-camera-zoom aria-label="Zoom"><span>+</span></label>
         <button class="social-icon-btn" type="button" data-camera-cancel aria-label="Cancel" title="Cancel">${socialIcon('close')}</button>
         <input type="file" accept="image/*" data-camera-library-input hidden>
+        <input type="file" accept="image/*" data-camera-logo-input hidden>
       </div>
       <div class="leaderboard-share-status" data-share-status>Frame the group. The title, club logo and scoreboard will sit over the photo.</div>
     </div>
@@ -994,6 +1000,13 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
   document.querySelector('[data-camera-library]')?.addEventListener('click', () => {
     document.querySelector('[data-camera-library-input]')?.click();
   });
+  document.querySelector('[data-camera-logo]')?.addEventListener('click', () => document.querySelector('[data-camera-logo-input]')?.click());
+  document.querySelector('[data-camera-logo-input]')?.addEventListener('change', async event => {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    try { const logo = await loadLeaderboardSharePhoto(file, true); releaseLeaderboardImage(leaderboardClubLogo); leaderboardClubLogo = logo; renderLeaderboard(); }
+    catch (_) { updateLeaderboardShareStatus('That club logo could not be loaded.'); }
+  });
   document.querySelector('[data-camera-library-input]')?.addEventListener('change', async event => {
     const file = event.currentTarget.files?.[0];
     if (!file) return;
@@ -1010,6 +1023,7 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
   });
   document.querySelector('[data-camera-cancel]')?.addEventListener('click', () => {
     stopLeaderboardCamera();
+    leaderboardComposerActive = false;
     renderLeaderboard();
   });
 }
@@ -1073,87 +1087,25 @@ function releaseLeaderboardImage(image) {
 }
 
 function bindLeaderboardShareActions(standings) {
-  const previewButton = document.querySelector('[data-preview-leaderboard]');
-  const cameraButton = document.querySelector('[data-team-camera]');
+  document.querySelector('[data-preview-leaderboard]')?.addEventListener('click', () => {
+    leaderboardComposerActive = true;
+    if (leaderboardSharePhoto) openLeaderboardSharePreview(standings);
+    else openLeaderboardCamera(standings);
+  });
   const photoInput = document.querySelector('[data-share-photo-input]');
-  const choosePhotoButton = document.querySelector('[data-share-photo]');
-  const removePhotoButton = document.querySelector('[data-remove-share-photo]');
-  const logoInput = document.querySelector('[data-share-club-logo-input]');
-  const chooseLogoButton = document.querySelector('[data-share-club-logo]');
-  const removeLogoButton = document.querySelector('[data-remove-club-logo]');
-
-  if (previewButton) {
-    previewButton.addEventListener('click', () => {
-      if (!leaderboardSharePhoto) {
-        updateLeaderboardShareStatus('Add a photo before creating your social post.');
-        openLeaderboardCamera(standings);
-        return;
-      }
-      openLeaderboardSharePreview(standings);
-    });
-  }
-
-  if (cameraButton) {
-    cameraButton.addEventListener('click', () => openLeaderboardCamera(standings));
-  }
-
-  if (choosePhotoButton && photoInput) {
-    choosePhotoButton.addEventListener('click', () => photoInput.click());
-    photoInput.addEventListener('change', async event => {
-      const input = event.currentTarget;
-      const file = input.files?.[0];
-      input.value = '';
-      if (!file) return;
-      try {
-        const nextPhoto = await loadLeaderboardSharePhoto(file, true);
-        releaseLeaderboardImage(leaderboardSharePhoto);
-        leaderboardSharePhoto = nextPhoto;
-        renderLeaderboard();
-        updateLeaderboardShareStatus('Photo added. Create the social post when you’re ready.');
-      } catch (_) {
-        updateLeaderboardShareStatus('That photo could not be loaded. Try another image.');
-      }
-    });
-  }
-
-  if (removePhotoButton) {
-    removePhotoButton.addEventListener('click', () => {
+  photoInput?.addEventListener('change', async event => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    try {
+      const nextPhoto = await loadLeaderboardSharePhoto(file, true);
       releaseLeaderboardImage(leaderboardSharePhoto);
-      leaderboardSharePhoto = null;
-      if (photoInput) photoInput.value = '';
-      renderLeaderboard();
-      updateLeaderboardShareStatus('Photo removed.');
-    });
-  }
-
-  if (chooseLogoButton && logoInput) {
-    chooseLogoButton.addEventListener('click', () => logoInput.click());
-    logoInput.addEventListener('change', async event => {
-      const input = event.currentTarget;
-      const file = input.files?.[0];
-      input.value = '';
-      if (!file) return;
-      try {
-        const nextLogo = await loadLeaderboardSharePhoto(file, true);
-        releaseLeaderboardImage(leaderboardClubLogo);
-        leaderboardClubLogo = nextLogo;
-        renderLeaderboard();
-        updateLeaderboardShareStatus('Club logo added to your post.');
-      } catch (_) {
-        updateLeaderboardShareStatus('That club logo could not be loaded. Try a PNG or JPG.');
-      }
-    });
-  }
-
-  if (removeLogoButton) {
-    removeLogoButton.addEventListener('click', () => {
-      releaseLeaderboardImage(leaderboardClubLogo);
-      leaderboardClubLogo = null;
-      if (logoInput) logoInput.value = '';
-      renderLeaderboard();
-      updateLeaderboardShareStatus('Club logo removed.');
-    });
-  }
+      leaderboardSharePhoto = nextPhoto;
+      leaderboardComposerActive = true;
+      openLeaderboardSharePreview(standings);
+    } catch (_) { updateLeaderboardShareStatus('That photo could not be loaded. Try another image.'); }
+  });
 }
 function loadLeaderboardSharePhoto(file, keepObjectUrl = false) {
   return new Promise((resolve, reject) => {
