@@ -322,6 +322,9 @@ function resetTournament() {
   state.pendingSkipRoundIndex = null;
   state.setupStep = 0;
   state.built = false;
+  leaderboardSharePhoto = null;
+  leaderboardClubLogo = null;
+  clearLeaderboardPreview();
   render();
 }
 
@@ -1161,7 +1164,7 @@ async function buildLeaderboardShareImage(standings) {
   ctx.textAlign = 'left';
   ctx.fillStyle = 'rgba(245,247,255,0.56)';
   ctx.font = '700 16px Inter, system-ui, sans-serif';
-  ctx.fillText('PADel. SCORED PROPERLY.'.toUpperCase(), 72, 1330);
+  ctx.fillText('PADEL. SCORED PROPERLY.', 72, 1330);
   ctx.textAlign = 'right';
   ctx.fillStyle = lime;
   ctx.font = '800 17px Inter, system-ui, sans-serif';
