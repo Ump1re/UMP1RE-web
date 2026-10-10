@@ -3517,6 +3517,36 @@
   .fixture-card .fixture-player-name { flex: 1 1 auto; width: auto; }
   .fixture-card .fixture-player .player-avatar { flex-shrink: 0; }
 
+
+  /* Restore legible names in the match cards at phone widths. */
+  .fixture-card .fixture-player-name {
+    font-family: var(--body);
+    font-size: clamp(14px, 3.6vw, 19px);
+    font-weight: 750;
+    line-height: 1.12;
+    letter-spacing: -0.025em;
+    text-transform: none;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+  }
+  .fixture-card .fixture-player {
+    gap: 7px;
+    min-width: 0;
+  }
+  .fixture-card .fixture-card-match {
+    gap: clamp(6px, 1.6vw, 14px);
+  }
+  .fixture-card .fixture-player .player-avatar {
+    width: clamp(36px, 9vw, 52px);
+    height: clamp(36px, 9vw, 52px);
+    flex: 0 0 auto;
+  }
+  @media (max-width: 420px) {
+    .fixture-card .fixture-player-name { font-size: clamp(13px, 3.7vw, 16px); }
+    .fixture-card .fixture-player .player-avatar { width: 36px; height: 36px; }
+    .fixture-card .fixture-card-match { gap: 5px; }
+  }
+
 </style>
 </head>
 <body>
