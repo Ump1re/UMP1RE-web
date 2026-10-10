@@ -1126,6 +1126,17 @@ function updateLeaderboardShareStatus(message) {
   if (status) status.textContent = message;
 }
 
+function showImageSavedToast() {
+  document.querySelector('[data-image-saved-toast]')?.remove();
+  const toast = document.createElement('div');
+  toast.className = 'image-saved-toast';
+  toast.setAttribute('data-image-saved-toast', '');
+  toast.setAttribute('role', 'status');
+  toast.innerHTML = '<span>Image Saved to Camera Roll</span><button type="button" aria-label="Dismiss">×</button>';
+  toast.querySelector('button').addEventListener('click', () => toast.remove());
+  document.body.append(toast);
+}
+
 async function shareLeaderboardImageBlob(blob, intent = 'share') {
   if (!blob) {
     updateLeaderboardShareStatus('No preview image is available.');
@@ -1139,6 +1150,7 @@ async function shareLeaderboardImageBlob(blob, intent = 'share') {
     if (canShareFiles) {
       await navigator.share({ title: 'Americano leaderboard', files: [file] });
       updateLeaderboardShareStatus('');
+      showImageSavedToast();
       return;
     }
 
