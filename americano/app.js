@@ -978,7 +978,7 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
         <input type="file" accept="image/*" data-camera-library-input hidden>
         <input type="file" accept="image/*" data-camera-logo-input hidden>
       </div>
-      <div class="leaderboard-share-status" data-share-status>Frame the group. The title, club logo and scoreboard will sit over the photo.</div>
+      <div class="leaderboard-share-status" data-share-status></div>
     </div>
   `;
 
