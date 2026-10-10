@@ -952,6 +952,7 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
           </div>
         `).join('')}
       </div>
+      <img class="social-camera-brand" src="/assets/UMP1RE_Logo.svg" alt="Ump1re">
     </div>
   `;
   els['leaderboard-actions'].hidden = false;
