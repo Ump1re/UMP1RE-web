@@ -789,7 +789,7 @@
     align-self: stretch;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     gap: 0.28rem;
     text-align: center;
@@ -797,9 +797,13 @@
 
   body[data-page-mode="setup"] .players-step .choice-value,
   body[data-page-mode="setup"] .players-step .choice-sub {
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
     display: block;
-    width: auto;
-    max-width: 100%;
+    width: max-content;
+    max-width: none;
+    white-space: nowrap;
     text-align: center;
   }
 
