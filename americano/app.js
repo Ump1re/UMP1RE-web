@@ -802,7 +802,7 @@ function renderLeaderboard() {
   if (!showPointsToggle) state.leaderboardView = 'raw';
   const displayedPoints = row => state.leaderboardView === 'raw' ? row.rawPoints : row.points;
 
-  if (leaderboardComposerActive || __removedCameraActive || leaderboardPreviewActive) {
+  if (leaderboardComposerActive || leaderboardPreviewActive) {
     if (leaderboardPreviewActive) renderLeaderboardSharePreview(standings, fairnessAdjusted);
     else renderLeaderboardComposer(standings, fairnessAdjusted);
     return;
