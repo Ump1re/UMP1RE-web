@@ -80,6 +80,7 @@ let leaderboardPhotoCrop = { scale: 1, offsetX: 0, offsetY: 0 };
 let leaderboardPreparedShareBlob = null;
 let leaderboardCompositePreviewUrl = null;
 let leaderboardShareBuildId = 0;
+let leaderboardPreviewBuildId = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
   config = await loadAmericanoConfig();
@@ -1015,6 +1016,7 @@ function bindSocialCropGestures(standings) {
       leaderboardPhotoCrop.offsetX = overflowX > 0 ? clamp(gesture.offsetX - (point.x - gesture.x) / overflowX, -1, 1) : 0;
       leaderboardPhotoCrop.offsetY = overflowY > 0 ? clamp(gesture.offsetY - (point.y - gesture.y) / overflowY, -1, 1) : 0;
     }
+    refreshLeaderboardCompositePreview(standings);
   });
   const endPointer = event => {
     if (!pointers.has(event.pointerId)) return;
@@ -1026,8 +1028,22 @@ function bindSocialCropGestures(standings) {
   frame.addEventListener('pointercancel', endPointer);
 }
 
+function refreshLeaderboardCompositePreview(standings) {
+  const previewBuildId = ++leaderboardPreviewBuildId;
+  buildLeaderboardShareImage(standings).then(blob => {
+    if (previewBuildId !== leaderboardPreviewBuildId || !leaderboardComposerActive || !blob) return;
+    const preview = document.querySelector('[data-social-composite-preview]');
+    if (!preview) return;
+    const nextPreviewUrl = URL.createObjectURL(blob);
+    preview.src = nextPreviewUrl;
+    if (leaderboardCompositePreviewUrl) URL.revokeObjectURL(leaderboardCompositePreviewUrl);
+    leaderboardCompositePreviewUrl = nextPreviewUrl;
+  }).catch(() => {});
+}
+
 function prepareLeaderboardShareImage(standings) {
   const buildId = ++leaderboardShareBuildId;
+  leaderboardPreviewBuildId += 1;
   leaderboardPreparedShareBlob = null;
   const shareButton = document.querySelector('[data-social-share]');
   if (shareButton) shareButton.disabled = true;
