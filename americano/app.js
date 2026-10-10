@@ -956,8 +956,8 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
           </div>
         `).join('')}
         <div class="social-camera-score-footer">
-          <span>Padel. Scored Properly.</span>
           <img src="/assets/UMP1RE_Logo.svg" alt="Ump1re">
+          <span>Padel. Scored Properly.</span>
         </div>
       </div>
     </div>
@@ -1353,17 +1353,19 @@ async function buildLeaderboardShareImage(standings) {
   ctx.lineTo(1008, 1196);
   ctx.stroke();
   ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = 'rgba(245,247,255,0.72)';
-  ctx.font = '700 14px Inter, system-ui, sans-serif';
-  ctx.fillText('Padel. Scored Properly.', 72, 1242);
   if (brand) {
-    drawImageContain(ctx, brand, 838, 1205, 170, 38);
+    drawImageContain(ctx, brand, 72, 1205, 170, 38);
   } else {
-    ctx.textAlign = 'right';
+    ctx.textAlign = 'left';
     ctx.fillStyle = '#fff';
     ctx.font = '900 23px Inter, system-ui, sans-serif';
-    ctx.fillText('UMP1RE', 1008, 1242);
+    ctx.fillText('UMP1RE', 72, 1242);
   }
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(245,247,255,0.72)';
+  ctx.font = '700 14px Inter, system-ui, sans-serif';
+  ctx.fillText('Padel. Scored Properly.', 1008, 1242);
+  ctx.textAlign = 'left';
 
   return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
 }
