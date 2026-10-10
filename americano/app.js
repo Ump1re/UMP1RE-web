@@ -75,6 +75,8 @@ const state = {
 const els = {};
 let leaderboardSharePhoto = null;
 let leaderboardClubLogo = null;
+let leaderboardCameraActive = false;
+let leaderboardCameraStream = null;
 let leaderboardPreviewActive = false;
 let leaderboardPreviewBlob = null;
 let leaderboardPreviewUrl = null;
@@ -220,6 +222,7 @@ function closeLeaderboard() {
   }
   els['leaderboard-modal'].classList.remove('open');
   els['leaderboard-modal'].setAttribute('aria-hidden', 'true');
+  stopLeaderboardCamera();
   clearLeaderboardPreview();
   if (els['leaderboard-actions']) {
     els['leaderboard-actions'].hidden = true;
@@ -322,8 +325,11 @@ function resetTournament() {
   state.pendingSkipRoundIndex = null;
   state.setupStep = 0;
   state.built = false;
+  releaseLeaderboardImage(leaderboardSharePhoto);
+  releaseLeaderboardImage(leaderboardClubLogo);
   leaderboardSharePhoto = null;
   leaderboardClubLogo = null;
+  stopLeaderboardCamera();
   clearLeaderboardPreview();
   render();
 }
@@ -711,6 +717,10 @@ function renderLeaderboard() {
   if (!showPointsToggle) state.leaderboardView = 'raw';
   const displayedPoints = row => state.leaderboardView === 'raw' ? row.rawPoints : row.points;
 
+  if (leaderboardCameraActive) {
+    renderLeaderboardCamera(standings, fairnessAdjusted);
+    return;
+  }
   if (leaderboardPreviewActive) {
     renderLeaderboardSharePreview(standings, fairnessAdjusted);
     return;
@@ -778,7 +788,8 @@ function renderLeaderboard() {
         <div class="leaderboard-share">
           <div class="leaderboard-share-copy">Compose your Americano social post.</div>
           <div class="leaderboard-share-actions">
-            <button class="btn secondary" type="button" data-share-photo>${leaderboardSharePhoto ? 'Change team photo' : 'Add team photo'}</button>
+            <button class="btn secondary" type="button" data-team-camera>${leaderboardSharePhoto ? 'Retake team photo' : 'Take team photo'}</button>
+            <button class="btn secondary" type="button" data-share-photo>Choose photo</button>
             <button class="btn secondary" type="button" data-remove-share-photo ${leaderboardSharePhoto ? '' : 'hidden'}>Remove photo</button>
             <button class="btn secondary" type="button" data-share-club-logo>${leaderboardClubLogo ? 'Change club logo' : 'Add club logo'}</button>
             <button class="btn secondary" type="button" data-remove-club-logo ${leaderboardClubLogo ? '' : 'hidden'}>Remove logo</button>
@@ -786,7 +797,7 @@ function renderLeaderboard() {
             <input type="file" accept="image/*" data-share-photo-input hidden>
             <input type="file" accept="image/*" data-share-club-logo-input hidden>
           </div>
-          <div class="leaderboard-share-status" data-share-status>Choose a team photo. Add your club logo if you want.</div>
+          <div class="leaderboard-share-status" data-share-status>Take or choose a team photo. The social-post graphics appear in the camera viewfinder.</div>
         </div>
       `;
     }
@@ -868,8 +879,148 @@ function bindLeaderboardViewActions() {
   });
 }
 
+function openLeaderboardCamera(standings) {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    updateLeaderboardShareStatus('Camera preview is unavailable here. Choose a photo from your library instead.');
+    document.querySelector('[data-share-photo-input]')?.click();
+    return;
+  }
+
+  stopLeaderboardCamera();
+  navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: { facingMode: { ideal: 'environment' } },
+  }).then(stream => {
+    leaderboardCameraStream = stream;
+    leaderboardCameraActive = true;
+    renderLeaderboard();
+  }).catch(() => {
+    updateLeaderboardShareStatus('Camera access was unavailable. Choose a photo from your library instead.');
+    document.querySelector('[data-share-photo-input]')?.click();
+  });
+}
+
+function stopLeaderboardCamera() {
+  if (leaderboardCameraStream) {
+    leaderboardCameraStream.getTracks().forEach(track => track.stop());
+    leaderboardCameraStream = null;
+  }
+  leaderboardCameraActive = false;
+}
+
+function renderLeaderboardCamera(standings, fairnessAdjusted) {
+  const topThree = standings.slice(0, 3);
+  const subtitle = fairnessAdjusted
+    ? (state.leaderboardView === 'raw' ? 'Raw points' : 'Adjusted points')
+    : 'Final standings';
+  els['leaderboard-subtitle'].textContent = `Camera viewfinder · ${subtitle}`;
+  els['leaderboard-body'].innerHTML = `
+    <div class="social-camera-viewfinder">
+      <video data-social-camera autoplay muted playsinline aria-label="Live camera preview"></video>
+      <div class="social-camera-shade"></div>
+      <img class="social-camera-brand" src="/assets/UMP1RE_Logo.svg" alt="Ump1re">
+      ${leaderboardClubLogo
+        ? `<div class="social-camera-club"><img src="${leaderboardClubLogo._shareObjectUrl}" alt="Club logo"></div>`
+        : ''}
+      <div class="social-camera-title">
+        <span>Americano</span>
+        <strong>Winner</strong>
+      </div>
+      <div class="social-camera-scoreboard">
+        <div class="social-camera-scoreboard-head">
+          <span>Top three</span>
+          <span>${state.leaderboardView === 'raw' ? 'Raw points' : 'Points'}</span>
+        </div>
+        ${topThree.map((row, index) => `
+          <div class="social-camera-score-row ${index === 0 ? 'is-winner' : ''}">
+            <span class="social-camera-rank">${index === 0 ? '1ST' : index === 1 ? '2ND' : '3RD'}</span>
+            <span class="social-camera-player">
+              <strong>${escapeHtml(state.players[row.playerIdx])}</strong>
+              <small>${row.played} matches · ${row.wins} wins</small>
+            </span>
+            <strong class="social-camera-points">${state.leaderboardView === 'raw' ? row.rawPoints : row.points}</strong>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  els['leaderboard-actions'].hidden = false;
+  els['leaderboard-actions'].innerHTML = `
+    <div class="leaderboard-share">
+      <div class="leaderboard-share-actions">
+        <button class="btn primary" type="button" data-camera-capture>Take photo</button>
+        <button class="btn secondary" type="button" data-camera-library>Choose from library</button>
+        <button class="btn ghost" type="button" data-camera-cancel>Cancel</button>
+        <input type="file" accept="image/*" data-camera-library-input hidden>
+      </div>
+      <div class="leaderboard-share-status" data-share-status>Frame the group. The title, club logo and scoreboard will sit over the photo.</div>
+    </div>
+  `;
+
+  const video = document.querySelector('[data-social-camera]');
+  if (video && leaderboardCameraStream) {
+    video.srcObject = leaderboardCameraStream;
+    video.play().catch(() => {});
+  }
+
+  document.querySelector('[data-camera-capture]')?.addEventListener('click', () => {
+    captureLeaderboardCameraPhoto(standings, video);
+  });
+  document.querySelector('[data-camera-library]')?.addEventListener('click', () => {
+    document.querySelector('[data-camera-library-input]')?.click();
+  });
+  document.querySelector('[data-camera-library-input]')?.addEventListener('change', async event => {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    try {
+      leaderboardSharePhoto = await loadLeaderboardSharePhoto(file);
+      stopLeaderboardCamera();
+      renderLeaderboard();
+      openLeaderboardSharePreview(standings);
+    } catch (_) {
+      updateLeaderboardShareStatus('That photo could not be loaded. Try another image.');
+    }
+  });
+  document.querySelector('[data-camera-cancel]')?.addEventListener('click', () => {
+    stopLeaderboardCamera();
+    renderLeaderboard();
+  });
+}
+
+async function captureLeaderboardCameraPhoto(standings, video) {
+  if (!video?.videoWidth || !video.videoHeight) {
+    updateLeaderboardShareStatus('The camera is still starting. Try again in a moment.');
+    return;
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+  if (!blob) {
+    updateLeaderboardShareStatus('Could not capture that photo. Please try again.');
+    return;
+  }
+  const file = new File([blob], 'americano-team-photo.jpg', { type: 'image/jpeg' });
+  releaseLeaderboardImage(leaderboardSharePhoto);
+  leaderboardSharePhoto = await loadLeaderboardSharePhoto(file);
+  stopLeaderboardCamera();
+  renderLeaderboard();
+  openLeaderboardSharePreview(standings);
+}
+
+function releaseLeaderboardImage(image) {
+  if (image?._shareObjectUrl) {
+    URL.revokeObjectURL(image._shareObjectUrl);
+    delete image._shareObjectUrl;
+  }
+}
+
 function bindLeaderboardShareActions(standings) {
   const previewButton = document.querySelector('[data-preview-leaderboard]');
+  const cameraButton = document.querySelector('[data-team-camera]');
   const photoInput = document.querySelector('[data-share-photo-input]');
   const addPhotoButton = document.querySelector('[data-share-photo]');
   const removePhotoButton = document.querySelector('[data-remove-share-photo]');
@@ -880,12 +1031,16 @@ function bindLeaderboardShareActions(standings) {
   if (previewButton) {
     previewButton.addEventListener('click', () => {
       if (!leaderboardSharePhoto) {
-        updateLeaderboardShareStatus('Add the team photo to start your social post.');
-        photoInput?.click();
+        updateLeaderboardShareStatus('Take or choose a team photo to start your social post.');
+        openLeaderboardCamera(standings);
         return;
       }
       openLeaderboardSharePreview(standings);
     });
+  }
+
+  if (cameraButton) {
+    cameraButton.addEventListener('click', () => openLeaderboardCamera(standings));
   }
 
   if (addPhotoButton && photoInput) {
@@ -895,7 +1050,7 @@ function bindLeaderboardShareActions(standings) {
       if (!file) return;
       try {
         leaderboardSharePhoto = await loadLeaderboardSharePhoto(file);
-        addPhotoButton.textContent = 'Change team photo';
+        addPhotoButton.textContent = 'Choose another photo';
         if (removePhotoButton) removePhotoButton.hidden = false;
         updateLeaderboardShareStatus('Team photo added. Add a club logo if you like, then create the post.');
       } catch (_) {
@@ -906,6 +1061,7 @@ function bindLeaderboardShareActions(standings) {
 
   if (removePhotoButton) {
     removePhotoButton.addEventListener('click', () => {
+      releaseLeaderboardImage(leaderboardSharePhoto);
       leaderboardSharePhoto = null;
       if (photoInput) photoInput.value = '';
       if (addPhotoButton) addPhotoButton.textContent = 'Add team photo';
@@ -920,7 +1076,8 @@ function bindLeaderboardShareActions(standings) {
       const file = logoInput.files?.[0];
       if (!file) return;
       try {
-        leaderboardClubLogo = await loadLeaderboardSharePhoto(file);
+        releaseLeaderboardImage(leaderboardClubLogo);
+        leaderboardClubLogo = await loadLeaderboardSharePhoto(file, true);
         addLogoButton.textContent = 'Change club logo';
         if (removeLogoButton) removeLogoButton.hidden = false;
         updateLeaderboardShareStatus('Club logo added. It will appear over the hero photo.');
@@ -932,6 +1089,7 @@ function bindLeaderboardShareActions(standings) {
 
   if (removeLogoButton) {
     removeLogoButton.addEventListener('click', () => {
+      releaseLeaderboardImage(leaderboardClubLogo);
       leaderboardClubLogo = null;
       if (logoInput) logoInput.value = '';
       if (addLogoButton) addLogoButton.textContent = 'Add club logo';
@@ -941,12 +1099,13 @@ function bindLeaderboardShareActions(standings) {
   }
 }
 
-function loadLeaderboardSharePhoto(file) {
+function loadLeaderboardSharePhoto(file, keepObjectUrl = false) {
   return new Promise((resolve, reject) => {
     const objectUrl = URL.createObjectURL(file);
     const image = new Image();
     image.onload = () => {
-      URL.revokeObjectURL(objectUrl);
+      if (keepObjectUrl) image._shareObjectUrl = objectUrl;
+      else URL.revokeObjectURL(objectUrl);
       resolve(image);
     };
     image.onerror = () => {
@@ -1031,35 +1190,30 @@ async function buildLeaderboardShareImage(standings) {
 
   const lime = '#d9ff33';
   const ink = '#090b10';
-  const rows = standings.slice(0, 3).map((row, index) => ({
+  const rows = standings.slice(0, 3).map(row => ({
     ...row,
-    rank: index + 1,
     displayPoints: state.leaderboardView === 'raw' ? row.rawPoints : row.points,
   }));
 
-  if (document.fonts?.load) await document.fonts.load('96px TimesSquare');
-
   if (leaderboardSharePhoto) {
-    drawImageCover(ctx, leaderboardSharePhoto, 0, 0, width, 970);
+    drawImageCover(ctx, leaderboardSharePhoto, 0, 0, width, height);
   } else {
-    const fallback = ctx.createLinearGradient(0, 0, width, 970);
+    const fallback = ctx.createLinearGradient(0, 0, width, height);
     fallback.addColorStop(0, '#222a32');
-    fallback.addColorStop(1, '#090b10');
+    fallback.addColorStop(1, ink);
     ctx.fillStyle = fallback;
-    ctx.fillRect(0, 0, width, 970);
-    ctx.strokeStyle = 'rgba(217,255,51,0.13)';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(70, 120, width - 140, 650);
+    ctx.fillRect(0, 0, width, height);
   }
 
-  const lowerShade = ctx.createLinearGradient(0, 0, 0, 970);
-  lowerShade.addColorStop(0, 'rgba(5,7,10,0.62)');
-  lowerShade.addColorStop(0.32, 'rgba(5,7,10,0.18)');
-  lowerShade.addColorStop(0.68, 'rgba(5,7,10,0.15)');
-  lowerShade.addColorStop(1, 'rgba(5,7,10,0.70)');
-  ctx.fillStyle = lowerShade;
-  ctx.fillRect(0, 0, width, 970);
+  const shade = ctx.createLinearGradient(0, 0, 0, height);
+  shade.addColorStop(0, 'rgba(5,7,10,0.64)');
+  shade.addColorStop(0.30, 'rgba(5,7,10,0.08)');
+  shade.addColorStop(0.58, 'rgba(5,7,10,0.12)');
+  shade.addColorStop(1, 'rgba(5,7,10,0.82)');
+  ctx.fillStyle = shade;
+  ctx.fillRect(0, 0, width, height);
 
+  if (document.fonts?.load) await document.fonts.load('82px TimesSquare');
   const brand = await new Promise(resolve => {
     const image = new Image();
     image.onload = () => resolve(image);
@@ -1089,35 +1243,30 @@ async function buildLeaderboardShareImage(standings) {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = lime;
-  ctx.font = '96px TimesSquare, Inter, system-ui, sans-serif';
-  drawCanvasText(ctx, 'AMERICANO', 68, 304, 850);
+  ctx.font = '66px TimesSquare, Inter, system-ui, sans-serif';
+  drawCanvasText(ctx, 'AMERICANO', 68, 270, 850);
   ctx.fillStyle = '#fff';
-  ctx.font = '112px TimesSquare, Inter, system-ui, sans-serif';
-  ctx.fillText('WINNER', 68, 421);
+  ctx.font = '82px TimesSquare, Inter, system-ui, sans-serif';
+  ctx.fillText('WINNER', 68, 354);
   ctx.fillStyle = lime;
-  roundRect(ctx, 72, 449, 160, 8, 4);
+  roundRect(ctx, 72, 379, 118, 6, 3);
   ctx.fill();
 
-  ctx.fillStyle = '#fff';
-  ctx.font = '800 18px Inter, system-ui, sans-serif';
-  ctx.fillText('FINAL STANDINGS', 76, 786);
-
-  // Dark scoreboard panel overlaps the bottom of the hero photo.
+  // A dark scoreboard panel carries the top three across the lower third of the photo.
   const panel = { x: 48, y: 810, width: 984, height: 474 };
-  ctx.fillStyle = 'rgba(8,10,14,0.94)';
+  ctx.fillStyle = 'rgba(8,10,14,0.93)';
   roundRect(ctx, panel.x, panel.y, panel.width, panel.height, 28);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(217,255,51,0.44)';
+  ctx.strokeStyle = 'rgba(217,255,51,0.42)';
   ctx.lineWidth = 2;
   roundRect(ctx, panel.x, panel.y, panel.width, panel.height, 28);
   ctx.stroke();
 
-  ctx.fillStyle = 'rgba(245,247,255,0.62)';
+  ctx.fillStyle = 'rgba(245,247,255,0.64)';
   ctx.font = '800 16px Inter, system-ui, sans-serif';
-  ctx.fillText('TOP THREE', 84, 856);
+  ctx.fillText('FINAL STANDINGS', 84, 856);
   ctx.textAlign = 'right';
-  ctx.fillStyle = 'rgba(245,247,255,0.62)';
-  ctx.fillText(state.leaderboardView === 'raw' ? 'RAW POINTS' : 'ADJUSTED POINTS', 996, 856);
+  ctx.fillText(state.leaderboardView === 'raw' ? 'RAW POINTS' : 'POINTS', 996, 856);
   ctx.textAlign = 'left';
 
   rows.forEach((row, index) => {
@@ -1126,31 +1275,25 @@ async function buildLeaderboardShareImage(standings) {
       ctx.fillStyle = lime;
       roundRect(ctx, 70, rowY, 940, 108, 18);
       ctx.fill();
-      ctx.fillStyle = ink;
-    } else {
-      if (index === 2) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.10)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(88, rowY - 5);
-        ctx.lineTo(992, rowY - 5);
-        ctx.stroke();
-      }
-      ctx.fillStyle = '#fff';
+    } else if (index === 2) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(88, rowY - 5);
+      ctx.lineTo(992, rowY - 5);
+      ctx.stroke();
     }
 
     const textColor = index === 0 ? ink : '#f5f7ff';
     ctx.fillStyle = index === 0 ? 'rgba(9,11,16,0.68)' : lime;
     ctx.font = '900 18px Inter, system-ui, sans-serif';
     ctx.fillText(index === 0 ? '1ST' : index === 1 ? '2ND' : '3RD', 96, rowY + 42);
-
     ctx.fillStyle = textColor;
     ctx.font = '800 30px Inter, system-ui, sans-serif';
     drawCanvasText(ctx, state.players[row.playerIdx], 190, rowY + 45, 530);
     ctx.fillStyle = index === 0 ? 'rgba(9,11,16,0.68)' : 'rgba(245,247,255,0.60)';
     ctx.font = '700 15px Inter, system-ui, sans-serif';
     ctx.fillText(`${row.played} MATCHES  ·  ${row.wins} WINS`, 192, rowY + 76);
-
     ctx.textAlign = 'right';
     ctx.fillStyle = textColor;
     ctx.font = '900 38px Inter, system-ui, sans-serif';
@@ -1161,8 +1304,8 @@ async function buildLeaderboardShareImage(standings) {
     ctx.textAlign = 'left';
   });
 
-  ctx.textAlign = 'left';
-  ctx.fillStyle = 'rgba(245,247,255,0.56)';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = 'rgba(245,247,255,0.58)';
   ctx.font = '700 16px Inter, system-ui, sans-serif';
   ctx.fillText('PADEL. SCORED PROPERLY.', 72, 1330);
   ctx.textAlign = 'right';
