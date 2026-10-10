@@ -73,6 +73,7 @@ const state = {
 };
 
 const els = {};
+let leaderboardSharePhoto = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   config = await loadAmericanoConfig();
@@ -764,10 +765,13 @@ function renderLeaderboard() {
         <div class="leaderboard-share">
           <div class="leaderboard-share-copy">Share the current Americano standings.</div>
           <div class="leaderboard-share-actions">
+            <button class="btn secondary" type="button" data-share-photo>Add photo</button>
+            <button class="btn secondary" type="button" data-remove-share-photo ${leaderboardSharePhoto ? '' : 'hidden'}>Remove photo</button>
             <button class="btn secondary" type="button" data-share-leaderboard="whatsapp">WhatsApp</button>
-            <button class="btn secondary" type="button" data-share-leaderboard="instagram">Instagram</button>
+            <button class="btn secondary" type="button" data-share-leaderboard="instagram">Share image</button>
+            <input type="file" accept="image/*" data-share-photo-input hidden>
           </div>
-          <div class="leaderboard-share-status" data-share-status>Choose WhatsApp for text or Instagram for an image.</div>
+          <div class="leaderboard-share-status" data-share-status>Optionally add a court photo to your leaderboard image.</div>
         </div>
       `;
     }
@@ -801,6 +805,56 @@ function bindLeaderboardShareActions(standings) {
         await shareLeaderboardToInstagram(standings);
       }
     });
+  });
+
+  const photoInput = document.querySelector('[data-share-photo-input]');
+  const addPhotoButton = document.querySelector('[data-share-photo]');
+  const removePhotoButton = document.querySelector('[data-remove-share-photo]');
+
+  if (addPhotoButton && photoInput) {
+    addPhotoButton.addEventListener('click', () => photoInput.click());
+    photoInput.addEventListener('change', async () => {
+      const file = photoInput.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        updateLeaderboardShareStatus('Choose an image file for the photo frame.');
+        return;
+      }
+      try {
+        leaderboardSharePhoto = await loadLeaderboardSharePhoto(file);
+        addPhotoButton.textContent = 'Change photo';
+        if (removePhotoButton) removePhotoButton.hidden = false;
+        updateLeaderboardShareStatus('Photo added. It will appear in the framed space on your image.');
+      } catch (_) {
+        updateLeaderboardShareStatus('That photo could not be loaded. Try another image.');
+      }
+    });
+  }
+
+  if (removePhotoButton) {
+    removePhotoButton.addEventListener('click', () => {
+      leaderboardSharePhoto = null;
+      if (photoInput) photoInput.value = '';
+      if (addPhotoButton) addPhotoButton.textContent = 'Add photo';
+      removePhotoButton.hidden = true;
+      updateLeaderboardShareStatus('Photo removed. The share image will use the Ump1re photo frame.');
+    });
+  }
+}
+
+function loadLeaderboardSharePhoto(file) {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Image could not be loaded'));
+    };
+    image.src = objectUrl;
   });
 }
 
@@ -941,7 +995,7 @@ async function buildLeaderboardShareImage(standings) {
   const heroX = 72;
   const heroY = 288;
   const heroW = 936;
-  const heroH = 224;
+  const heroH = 240;
   ctx.fillStyle = lime;
   roundRect(ctx, heroX, heroY, heroW, heroH, 28);
   ctx.fill();
@@ -955,19 +1009,49 @@ async function buildLeaderboardShareImage(standings) {
   ctx.fillText('TOURNAMENT WINNER', 112, 335);
 
   ctx.fillStyle = ink;
-  ctx.font = '900 58px Inter, system-ui, sans-serif';
-  drawCanvasText(ctx, state.players[champion.playerIdx], 112, 409, 590);
+  ctx.font = '900 52px Inter, system-ui, sans-serif';
+  drawCanvasText(ctx, state.players[champion.playerIdx], 112, 405, 490);
   ctx.fillStyle = 'rgba(9,11,16,0.72)';
-  ctx.font = '700 18px Inter, system-ui, sans-serif';
-  ctx.fillText(`${champion.played} MATCHES  ·  ${champion.wins} WINS`, 116, 459);
+  ctx.font = '800 17px Inter, system-ui, sans-serif';
+  ctx.fillText(`${champion.displayPoints} POINTS  ·  ${champion.played} MATCHES  ·  ${champion.wins} WINS`, 116, 459);
 
-  ctx.textAlign = 'right';
-  ctx.fillStyle = ink;
-  ctx.font = '900 72px Inter, system-ui, sans-serif';
-  ctx.fillText(String(champion.displayPoints), 962, 405);
-  ctx.fillStyle = 'rgba(9,11,16,0.70)';
-  ctx.font = '800 16px Inter, system-ui, sans-serif';
-  ctx.fillText('POINTS', 960, 441);
+  const photoX = 650;
+  const photoY = 307;
+  const photoW = 324;
+  const photoH = 202;
+  ctx.fillStyle = 'rgba(9,11,16,0.88)';
+  roundRect(ctx, photoX, photoY, photoW, photoH, 20);
+  ctx.fill();
+  if (leaderboardSharePhoto) {
+    drawImageCover(ctx, leaderboardSharePhoto, photoX + 7, photoY + 7, photoW - 14, photoH - 14, 15);
+  } else {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(217,255,51,0.72)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(photoX + photoW / 2, photoY + 68, 24, Math.PI, 0);
+    ctx.lineTo(photoX + photoW / 2 + 34, photoY + 99);
+    ctx.lineTo(photoX + photoW / 2 + 34, photoY + 111);
+    ctx.lineTo(photoX + photoW / 2 - 34, photoY + 111);
+    ctx.lineTo(photoX + photoW / 2 - 34, photoY + 99);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(photoX + photoW / 2, photoY + 68, 9, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(245,247,255,0.92)';
+    ctx.font = '800 17px Inter, system-ui, sans-serif';
+    ctx.fillText('ADD A PHOTO', photoX + photoW / 2, photoY + 151);
+    ctx.fillStyle = 'rgba(245,247,255,0.55)';
+    ctx.font = '600 13px Inter, system-ui, sans-serif';
+    ctx.fillText('YOUR COURT-SIDE MOMENT', photoX + photoW / 2, photoY + 176);
+    ctx.textAlign = 'left';
+  }
+  ctx.strokeStyle = 'rgba(9,11,16,0.20)';
+  roundRect(ctx, photoX, photoY, photoW, photoH, 20);
+  ctx.stroke();
 
   const tableX = 72;
   const tableW = 936;
@@ -1087,6 +1171,33 @@ function drawCanvasText(ctx, text, x, y, maxWidth) {
     content = `${content.slice(0, -2)}…`;
   }
   ctx.fillText(content, x, y);
+}
+
+function drawImageCover(ctx, image, x, y, width, height, radius = 0) {
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const frameRatio = width / height;
+  const imageRatio = sourceWidth / sourceHeight;
+  let cropX = 0;
+  let cropY = 0;
+  let cropWidth = sourceWidth;
+  let cropHeight = sourceHeight;
+
+  if (imageRatio > frameRatio) {
+    cropWidth = sourceHeight * frameRatio;
+    cropX = (sourceWidth - cropWidth) / 2;
+  } else {
+    cropHeight = sourceWidth / frameRatio;
+    cropY = (sourceHeight - cropHeight) / 2;
+  }
+
+  ctx.save();
+  if (radius > 0) {
+    roundRect(ctx, x, y, width, height, radius);
+    ctx.clip();
+  }
+  ctx.drawImage(image, cropX, cropY, cropWidth, cropHeight, x, y, width, height);
+  ctx.restore();
 }
 
 function attachPageHandlers() {
