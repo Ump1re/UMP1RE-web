@@ -1226,7 +1226,7 @@ async function buildLeaderboardShareImage(standings) {
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.68)';
     ctx.shadowBlur = 18;
-    drawImageContain(ctx, leaderboardClubLogo, 728, 48, 300, 164);
+    drawImageContain(ctx, leaderboardClubLogo, 713, 54, 324, 189);
     ctx.restore();
   }
 
