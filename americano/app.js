@@ -942,7 +942,7 @@ function renderLeaderboardComposer(standings) {
   els['leaderboard-actions'].innerHTML = `
     <div class="leaderboard-share">
       <div class="social-action-toolbar">
-        <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-library aria-label="Choose from library" title="Choose from library">${socialIcon('gallery')}</button><span class="social-button-label">Gallery</span></span>
+        <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-library aria-label="Choose photos" title="Photos">${socialIcon('gallery')}</button><span class="social-button-label">Photos</span></span>
         <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-logo aria-label="Add or change club logo" title="Add or change club logo">${socialIcon('logo')}</button><span class="social-button-label">Club logo</span></span>
         <span class="social-labelled-action"><button class="social-icon-btn social-icon-btn-primary" type="button" data-social-share aria-label="Share post" disabled title="Share post">${socialIcon('share')}</button><span class="social-button-label">Share</span></span>
         <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-cancel aria-label="Back to standings" title="Back to standings">${socialIcon('close')}</button><span class="social-button-label">Back</span></span>
