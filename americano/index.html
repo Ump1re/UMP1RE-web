@@ -3449,6 +3449,52 @@
   .round-sitout-value { display:flex;gap:8px;flex-wrap:wrap; }
   @media(max-width:420px) { .fixture-card .player-avatar { width:32px;height:32px;flex-basis:32px;font-size:10px; } .fixture-player { gap:4px; } }
 
+
+  /* Portrait-first pairing cards: two players per team, names beneath portraits. */
+  .fixture-card .fixture-card-team {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    justify-items: center;
+    gap: clamp(3px, 1vw, 10px);
+    min-width: 0;
+    width: 100%;
+  }
+  .fixture-card .fixture-player {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 5px;
+    width: 100%;
+    min-width: 0;
+    text-align: center;
+  }
+  .fixture-card .fixture-player .player-avatar {
+    width: clamp(42px, 10vw, 64px);
+    height: clamp(42px, 10vw, 64px);
+    flex: 0 0 auto;
+    font-size: clamp(11px, 2.6vw, 15px);
+  }
+  .fixture-card .fixture-player-name {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    font: 700 clamp(9px, 2.1vw, 12px)/1.2 var(--body);
+    letter-spacing: 0;
+    text-transform: none;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
+  .fixture-card .fixture-card-match { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 4px; }
+  .fixture-card .fixture-card-vs { align-self: center; }
+  .round-sitout-value .fixture-player { flex-direction: column; align-items: center; text-align: center; gap: 5px; }
+  .round-sitout-value .fixture-player-name { font: 700 11px/1.2 var(--body); letter-spacing: 0; text-transform: none; }
+  @media (max-width: 420px) {
+    .fixture-card .fixture-player .player-avatar { width: clamp(34px, 9vw, 42px); height: clamp(34px, 9vw, 42px); flex: 0 0 auto; }
+    .fixture-card .fixture-player-name { font-size: 9px; }
+  }
+
 </style>
 </head>
 <body>
@@ -3514,7 +3560,7 @@
   </div>
 </div>
 
-<script src="app.js?v=39" defer></script>
+<script src="app.js?v=40" defer></script>
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
