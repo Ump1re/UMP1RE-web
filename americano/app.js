@@ -919,7 +919,7 @@ function renderLeaderboardComposer(standings) {
         </div>
         <div class="social-camera-scoreboard-head">
           <span>Final standings</span>
-          <span>${state.leaderboardView === 'raw' ? 'Raw points' : 'Points'}</span>
+          <span>Points</span>
         </div>
         ${topThree.map((row) => `
           <div class="social-camera-score-row ${row.rank === 1 ? 'is-winner' : ''}">
@@ -1242,7 +1242,7 @@ async function buildLeaderboardShareImage(standings) {
   ctx.font = '800 18px Inter, system-ui, sans-serif';
   ctx.fillText('FINAL STANDINGS', 120, 929);
   ctx.textAlign = 'right';
-  ctx.fillText(state.leaderboardView === 'raw' ? 'RAW POINTS' : 'POINTS', 960, 929);
+  ctx.fillText('POINTS', 960, 929);
   ctx.textAlign = 'left';
 
   rows.forEach((row, index) => {
@@ -1274,10 +1274,7 @@ async function buildLeaderboardShareImage(standings) {
     ctx.textAlign = 'right';
     ctx.fillStyle = textColor;
     ctx.font = '900 40px Inter, system-ui, sans-serif';
-    ctx.fillText(String(row.displayPoints), 956, rowY + 31);
-    ctx.fillStyle = isWinner ? 'rgba(9,11,16,0.68)' : 'rgba(245,247,255,0.60)';
-    ctx.font = '800 12px Inter, system-ui, sans-serif';
-    ctx.fillText('POINTS', 956, rowY + 47);
+    ctx.fillText(String(row.displayPoints), 956, rowY + 36);
     ctx.textAlign = 'left';
   });
 
