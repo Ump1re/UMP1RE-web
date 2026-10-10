@@ -77,6 +77,8 @@ let leaderboardSharePhoto = null;
 let leaderboardClubLogo = null;
 let leaderboardComposerActive = false;
 let leaderboardPhotoCrop = { scale: 1, offsetX: 0, offsetY: 0 };
+let leaderboardPreparedShareBlob = null;
+let leaderboardShareBuildId = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
   config = await loadAmericanoConfig();
@@ -293,6 +295,8 @@ function openLeaderboard() {
 
 function closeLeaderboard() {
   leaderboardComposerActive = false;
+  leaderboardShareBuildId += 1;
+  leaderboardPreparedShareBlob = null;
   const returnFocus = document.querySelector('[data-action="leaderboard"]');
   if (document.activeElement && typeof document.activeElement.blur === 'function') {
     document.activeElement.blur();
@@ -940,7 +944,7 @@ function renderLeaderboardComposer(standings) {
       <div class="social-action-toolbar">
         <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-library aria-label="Choose from library" title="Choose from library">${socialIcon('gallery')}</button><span class="social-button-label">Gallery</span></span>
         <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-logo aria-label="Add or change club logo" title="Add or change club logo">${socialIcon('logo')}</button><span class="social-button-label">Club logo</span></span>
-        <span class="social-labelled-action"><button class="social-icon-btn social-icon-btn-primary" type="button" data-social-share aria-label="Share post" title="Share post">${socialIcon('share')}</button><span class="social-button-label">Share</span></span>
+        <span class="social-labelled-action"><button class="social-icon-btn social-icon-btn-primary" type="button" data-social-share aria-label="Share post" disabled title="Share post">${socialIcon('share')}</button><span class="social-button-label">Share</span></span>
         <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-cancel aria-label="Back to standings" title="Back to standings">${socialIcon('close')}</button><span class="social-button-label">Back</span></span>
         <input type="file" accept="image/*" data-camera-library-input hidden>
         <input type="file" accept="image/*" data-camera-logo-input hidden>
@@ -972,15 +976,18 @@ function renderLeaderboardComposer(standings) {
       updateLeaderboardShareStatus('That photo could not be loaded. Try another image.');
     }
   });
-  document.querySelector('[data-social-share]')?.addEventListener('click', () => shareCurrentLeaderboardImage(standings));
-  bindSocialCropGestures();
+  document.querySelector('[data-social-share]')?.addEventListener('click', () => {
+    if (leaderboardPreparedShareBlob) shareLeaderboardImageBlob(leaderboardPreparedShareBlob, 'share');
+  });
+  bindSocialCropGestures(standings);
+  prepareLeaderboardShareImage(standings);
   document.querySelector('[data-camera-cancel]')?.addEventListener('click', () => {
     leaderboardComposerActive = false;
     renderLeaderboard();
   });
 }
 
-function bindSocialCropGestures() {
+function bindSocialCropGestures(standings) {
   const frame = document.querySelector('[data-social-crop-frame]');
   const photo = frame?.querySelector('[data-social-crop-photo]');
   if (!frame || !photo) return;
@@ -1045,9 +1052,28 @@ function bindSocialCropGestures() {
     if (!pointers.has(event.pointerId)) return;
     pointers.delete(event.pointerId);
     beginGesture();
+    if (pointers.size === 0) prepareLeaderboardShareImage(standings);
   };
   frame.addEventListener('pointerup', endPointer);
   frame.addEventListener('pointercancel', endPointer);
+  applyTransform();
+}
+
+function prepareLeaderboardShareImage(standings) {
+  const buildId = ++leaderboardShareBuildId;
+  leaderboardPreparedShareBlob = null;
+  const shareButton = document.querySelector('[data-social-share]');
+  if (shareButton) shareButton.disabled = true;
+  buildLeaderboardShareImage(standings).then(blob => {
+    if (buildId !== leaderboardShareBuildId || !leaderboardComposerActive) return;
+    if (!blob) throw new Error('No share image available');
+    leaderboardPreparedShareBlob = blob;
+    const currentButton = document.querySelector('[data-social-share]');
+    if (currentButton) currentButton.disabled = false;
+  }).catch(() => {
+    if (buildId !== leaderboardShareBuildId) return;
+    updateLeaderboardShareStatus('Unable to prepare the image right now.');
+  });
 }
 
 function releaseLeaderboardImage(image) {
