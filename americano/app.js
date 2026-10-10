@@ -81,6 +81,8 @@ let leaderboardPreparedShareBlob = null;
 let leaderboardCompositePreviewUrl = null;
 let leaderboardShareBuildId = 0;
 let leaderboardPreviewBuildId = 0;
+let leaderboardPreviewRefreshTimer = null;
+let leaderboardPreviewLastRefresh = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
   config = await loadAmericanoConfig();
@@ -1029,20 +1031,28 @@ function bindSocialCropGestures(standings) {
 }
 
 function refreshLeaderboardCompositePreview(standings) {
-  const previewBuildId = ++leaderboardPreviewBuildId;
-  buildLeaderboardShareImage(standings).then(blob => {
-    if (previewBuildId !== leaderboardPreviewBuildId || !leaderboardComposerActive || !blob) return;
-    const preview = document.querySelector('[data-social-composite-preview]');
-    if (!preview) return;
-    const nextPreviewUrl = URL.createObjectURL(blob);
-    preview.src = nextPreviewUrl;
-    if (leaderboardCompositePreviewUrl) URL.revokeObjectURL(leaderboardCompositePreviewUrl);
-    leaderboardCompositePreviewUrl = nextPreviewUrl;
-  }).catch(() => {});
+  if (leaderboardPreviewRefreshTimer) return;
+  const wait = Math.max(0, 120 - (Date.now() - leaderboardPreviewLastRefresh));
+  leaderboardPreviewRefreshTimer = window.setTimeout(() => {
+    leaderboardPreviewRefreshTimer = null;
+    leaderboardPreviewLastRefresh = Date.now();
+    const previewBuildId = ++leaderboardPreviewBuildId;
+    buildLeaderboardShareImage(standings).then(blob => {
+      if (previewBuildId !== leaderboardPreviewBuildId || !leaderboardComposerActive || !blob) return;
+      const preview = document.querySelector('[data-social-composite-preview]');
+      if (!preview) return;
+      const nextPreviewUrl = URL.createObjectURL(blob);
+      preview.src = nextPreviewUrl;
+      if (leaderboardCompositePreviewUrl) URL.revokeObjectURL(leaderboardCompositePreviewUrl);
+      leaderboardCompositePreviewUrl = nextPreviewUrl;
+    }).catch(() => {});
+  }, wait);
 }
 
 function prepareLeaderboardShareImage(standings) {
   const buildId = ++leaderboardShareBuildId;
+  if (leaderboardPreviewRefreshTimer) window.clearTimeout(leaderboardPreviewRefreshTimer);
+  leaderboardPreviewRefreshTimer = null;
   leaderboardPreviewBuildId += 1;
   leaderboardPreparedShareBlob = null;
   const shareButton = document.querySelector('[data-social-share]');
