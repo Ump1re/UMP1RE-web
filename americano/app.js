@@ -856,69 +856,212 @@ async function shareLeaderboardToInstagram(standings) {
 }
 
 async function buildLeaderboardShareImage(standings) {
+  const width = 1080;
+  const height = 1350;
   const canvas = document.createElement('canvas');
-  canvas.width = 1080;
-  canvas.height = 1350;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
 
-  const gradient = ctx.createLinearGradient(0, 0, 1080, 1350);
-  gradient.addColorStop(0, '#0e101b');
-  gradient.addColorStop(1, '#171a2d');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const lime = '#d9ff33';
+  const ink = '#090b10';
+  const muted = 'rgba(245,247,255,0.62)';
+  const visibleRows = standings.map((row, index) => ({
+    ...row,
+    rank: index + 1,
+    displayPoints: state.leaderboardView === 'raw' ? row.rawPoints : row.points,
+  }));
+  const champion = visibleRows[0];
+  const remaining = visibleRows.slice(1);
+  const displayMode = state.leaderboardView === 'raw' ? 'RAW POINTS' : 'ADJUSTED POINTS';
+  const hasAdjustments = visibleRows.some(row => row.bonus > 0);
 
-  ctx.fillStyle = 'rgba(217,255,51,0.08)';
+  // Deep charcoal field with a restrained lime glow and subtle court geometry.
+  const background = ctx.createLinearGradient(0, 0, width, height);
+  background.addColorStop(0, '#10131b');
+  background.addColorStop(0.56, ink);
+  background.addColorStop(1, '#171b22');
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, width, height);
+
+  const glow = ctx.createRadialGradient(930, 60, 20, 930, 60, 720);
+  glow.addColorStop(0, 'rgba(217,255,51,0.13)');
+  glow.addColorStop(1, 'rgba(217,255,51,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.035)';
+  ctx.lineWidth = 2;
+  roundRect(ctx, 36, 36, width - 72, height - 72, 30);
+  ctx.stroke();
   ctx.beginPath();
-  ctx.arc(910, 170, 240, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.moveTo(845, 36);
+  ctx.lineTo(845, 228);
+  ctx.moveTo(36, 132);
+  ctx.lineTo(width - 36, 132);
+  ctx.stroke();
+  ctx.restore();
 
-  ctx.fillStyle = '#d9ff33';
-  ctx.font = '800 34px system-ui, sans-serif';
+  // Use the supplied Ump1re wordmark, with a text fallback if it cannot load.
+  const logo = await new Promise(resolve => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = '/assets/UMP1RE_Logo.svg';
+  });
+  if (logo) {
+    ctx.drawImage(logo, 72, 58, 154, 63);
+  } else {
+    ctx.fillStyle = lime;
+    ctx.font = '900 34px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('UMP1RE', 72, 101);
+  }
+
+  ctx.textAlign = 'right';
+  ctx.fillStyle = lime;
+  ctx.font = '800 20px Inter, system-ui, sans-serif';
+  ctx.fillText('MATCH COMPLETE', 1008, 82);
+  ctx.fillStyle = muted;
+  ctx.font = '700 17px Inter, system-ui, sans-serif';
+  ctx.fillText(`${state.players.length} PLAYERS  ·  ${state.schedule.length} ROUNDS`, 1008, 111);
+
   ctx.textAlign = 'left';
-  ctx.fillText('UMP1RE', 96, 108);
-
   ctx.fillStyle = '#f5f7ff';
-  ctx.font = '700 88px system-ui, sans-serif';
-  ctx.fillText('Americano', 96, 204);
+  ctx.font = '900 76px Inter, system-ui, sans-serif';
+  ctx.fillText('AMERICANO', 72, 220);
+  ctx.fillStyle = muted;
+  ctx.font = '600 21px Inter, system-ui, sans-serif';
+  ctx.fillText('FINAL STANDINGS', 76, 256);
 
-  ctx.fillStyle = 'rgba(245,247,255,0.72)';
-  ctx.font = '600 28px system-ui, sans-serif';
-  ctx.fillText(`Top 3 • ${state.players.length} players`, 96, 252);
-
-  ctx.fillStyle = 'rgba(255,255,255,0.05)';
-  roundRect(ctx, 72, 300, 936, 870, 30);
+  // Champion panel.
+  const heroX = 72;
+  const heroY = 288;
+  const heroW = 936;
+  const heroH = 224;
+  ctx.fillStyle = lime;
+  roundRect(ctx, heroX, heroY, heroW, heroH, 28);
   ctx.fill();
+  ctx.fillStyle = 'rgba(9,11,16,0.08)';
+  ctx.beginPath();
+  ctx.arc(910, 334, 145, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(9,11,16,0.66)';
+  ctx.font = '900 18px Inter, system-ui, sans-serif';
+  ctx.fillText('🏆  AMERICANO CHAMPION', 112, 335);
 
-  ctx.fillStyle = 'rgba(255,255,255,0.78)';
-  ctx.font = '700 24px system-ui, sans-serif';
-  const headers = ['Rank', 'Player', 'Played', 'Won', 'Points'];
-  const columns = [120, 200, 700, 820, 930];
-  headers.forEach((header, idx) => ctx.fillText(header, columns[idx], 366));
+  ctx.fillStyle = ink;
+  ctx.font = '900 58px Inter, system-ui, sans-serif';
+  drawCanvasText(ctx, state.players[champion.playerIdx], 112, 409, 590);
+  ctx.fillStyle = 'rgba(9,11,16,0.72)';
+  ctx.font = '700 18px Inter, system-ui, sans-serif';
+  ctx.fillText(`${champion.played} MATCHES  ·  ${champion.wins} WINS`, 116, 459);
 
-  standings.slice(0, 3).forEach((row, idx) => {
-    const y = 430 + (idx * 58);
-    if (idx === 0) {
-      ctx.fillStyle = 'rgba(217,255,51,0.10)';
-      roundRect(ctx, 90, y - 34, 900, 46, 16);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = ink;
+  ctx.font = '900 72px Inter, system-ui, sans-serif';
+  ctx.fillText(String(champion.displayPoints), 962, 405);
+  ctx.fillStyle = 'rgba(9,11,16,0.70)';
+  ctx.font = '800 16px Inter, system-ui, sans-serif';
+  ctx.fillText('POINTS', 960, 441);
+
+  const tableX = 72;
+  const tableW = 936;
+  const tableTop = 568;
+  const tableBottom = 1240;
+  const headerY = 602;
+  const rowsTop = 632;
+  const rowHeight = remaining.length
+    ? Math.min(82, (tableBottom - rowsTop) / remaining.length)
+    : 72;
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#f5f7ff';
+  ctx.font = '900 22px Inter, system-ui, sans-serif';
+  ctx.fillText('THE LEADERBOARD', tableX, 554);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = lime;
+  ctx.font = '800 15px Inter, system-ui, sans-serif';
+  ctx.fillText(displayMode, tableX + tableW, 554);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.045)';
+  roundRect(ctx, tableX, tableTop, tableW, tableBottom - tableTop, 22);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.58)';
+  ctx.font = '800 15px Inter, system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('RANK', 96, headerY);
+  ctx.fillText('PLAYER', 194, headerY);
+  ctx.textAlign = 'right';
+  ctx.fillText('PLAYED', 736, headerY);
+  ctx.fillText('WON', 844, headerY);
+  ctx.fillStyle = lime;
+  ctx.fillText('POINTS', 984, headerY);
+  ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(96, 616);
+  ctx.lineTo(984, 616);
+  ctx.stroke();
+
+  remaining.forEach((row, index) => {
+    const centerY = rowsTop + (rowHeight * index) + (rowHeight / 2);
+    if (index % 2 === 0) {
+      ctx.fillStyle = 'rgba(255,255,255,0.025)';
+      roundRect(ctx, 84, centerY - rowHeight / 2 + 2, tableW - 24, rowHeight - 4, 12);
       ctx.fill();
     }
+    ctx.textBaseline = 'middle';
 
-    ctx.fillStyle = idx === 0 ? '#d9ff33' : '#f5f7ff';
-    ctx.font = '700 28px system-ui, sans-serif';
-    ctx.fillText(String(idx + 1), columns[0], y);
-    ctx.fillText(String(row.played), columns[2], y);
-    ctx.fillText(String(row.wins), columns[3], y);
-    ctx.fillText(String(row.points), columns[4], y);
+    ctx.fillStyle = '#d9ff33';
+    ctx.font = '800 19px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(String(row.rank).padStart(2, '0'), 98, centerY);
 
     ctx.fillStyle = '#f5f7ff';
-    ctx.font = '600 28px system-ui, sans-serif';
-    drawCanvasText(ctx, state.players[row.playerIdx], columns[1], y, 440);
+    ctx.font = '700 21px Inter, system-ui, sans-serif';
+    drawCanvasText(ctx, state.players[row.playerIdx], 194, centerY, 460);
+
+    ctx.fillStyle = 'rgba(245,247,255,0.78)';
+    ctx.font = '700 20px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(String(row.played), 736, centerY);
+    ctx.fillText(String(row.wins), 844, centerY);
+    ctx.fillStyle = '#f5f7ff';
+    ctx.font = '800 21px Inter, system-ui, sans-serif';
+    ctx.fillText(String(row.displayPoints), 984, centerY);
+    ctx.textBaseline = 'alphabetic';
   });
 
-  ctx.fillStyle = 'rgba(245,247,255,0.65)';
-  ctx.font = '500 24px system-ui, sans-serif';
-  ctx.fillText('Top 3 snapshot • Played • Won • Points', 96, 1230);
+  if (hasAdjustments) {
+    ctx.textAlign = 'left';
+    ctx.fillStyle = muted;
+    ctx.font = '500 15px Inter, system-ui, sans-serif';
+    ctx.fillText(
+      state.leaderboardView === 'raw'
+        ? 'Raw scores shown · adjusted points account for uneven games played'
+        : 'Adjusted points include an average-score bonus for uneven games played',
+      76,
+      1274
+    );
+  }
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+  ctx.beginPath();
+  ctx.moveTo(72, 1296);
+  ctx.lineTo(1008, 1296);
+  ctx.stroke();
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(245,247,255,0.54)';
+  ctx.font = '700 15px Inter, system-ui, sans-serif';
+  ctx.fillText('PADEL. SCORED PROPERLY.', 76, 1325);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = lime;
+  ctx.font = '800 16px Inter, system-ui, sans-serif';
+  ctx.fillText('UMP1RE.NET', 1004, 1325);
 
   return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
 }
