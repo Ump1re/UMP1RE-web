@@ -1786,6 +1786,45 @@
     flex: 0 0 auto;
   }
 
+  .social-icon-control:has(.social-icon-btn-logo) {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.12rem;
+  }
+
+  .social-icon-label {
+    color: var(--muted);
+    font-size: 0.56rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.04em;
+  }
+
+  .camera-zoom-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 2.9rem;
+    padding: 0 0.55rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    color: var(--text);
+    font-size: 0.86rem;
+    font-weight: 800;
+  }
+
+  .camera-zoom-control input {
+    width: clamp(4rem, 18vw, 7rem);
+    accent-color: var(--lime);
+    touch-action: pan-y;
+  }
+
+  .social-camera-viewfinder video {
+    transform-origin: center center;
+    transition: transform 0.08s linear;
+    will-change: transform;
+  }
+
   .social-icon-btn {
     appearance: none;
     width: 2.9rem;
@@ -3257,7 +3296,7 @@
   </div>
 </div>
 
-<script src="app.js?v=4" defer></script>
+<script src="app.js?v=5" defer></script>
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
