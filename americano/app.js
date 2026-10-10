@@ -176,6 +176,7 @@ function persistGameState() {
     }
     const snapshot = {
       version: 1,
+      courtAssignmentVersion: 2,
       numPlayers: state.numPlayers,
       courts: state.courts,
       pointsPerGame: state.pointsPerGame,
@@ -211,6 +212,9 @@ function restoreGameState() {
       localStorage.removeItem(GAME_STORAGE_KEY);
       return false;
     }
+    const restoredFixtures = saved.courtAssignmentVersion === 2
+      ? saved.fixtures
+      : buildFixtureOrder(saved.schedule, saved.courts, saved.numPlayers);
     Object.assign(state, {
       numPlayers: saved.numPlayers,
       courts: saved.courts,
@@ -218,7 +222,7 @@ function restoreGameState() {
       rotations: saved.rotations,
       players: saved.players,
       schedule: saved.schedule,
-      fixtures: saved.fixtures,
+      fixtures: restoredFixtures,
       scores: saved.scores,
       drafts: new Map(Array.isArray(saved.drafts) ? saved.drafts.filter(entry => Array.isArray(entry) && Number.isInteger(entry[0])) : []),
       pageIndex: Number.isInteger(saved.pageIndex) ? saved.pageIndex : 3,
@@ -1949,11 +1953,11 @@ function gcd(a, b) {
   return x || 1;
 }
 
-function buildFixtureOrder(schedule, configuredCourts = state.courts) {
+function buildFixtureOrder(schedule, configuredCourts = state.courts, playerCount = state.numPlayers) {
   const fixtures = [];
   const maxMatchesInRound = Math.max(1, ...schedule.map(round => (round.matches || []).length));
   const courtCount = Math.max(1, configuredCourts, maxMatchesInRound);
-  const courtUse = Array.from({ length: state.numPlayers }, () => Array(courtCount).fill(0));
+  const courtUse = Array.from({ length: playerCount }, () => Array(courtCount).fill(0));
   const lastCourt = Array(state.numPlayers).fill(-1);
 
   schedule.forEach((round, roundIndex) => {
