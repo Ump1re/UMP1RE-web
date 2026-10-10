@@ -955,8 +955,11 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
             <strong class="social-camera-points">${state.leaderboardView === 'raw' ? row.rawPoints : row.points}</strong>
           </div>
         `).join('')}
+        <div class="social-camera-score-footer">
+          <span>Padel. Scored Properly.</span>
+          <img src="/assets/UMP1RE_Logo.svg" alt="Ump1re">
+        </div>
       </div>
-      <img class="social-camera-brand" src="/assets/UMP1RE_Logo.svg" alt="Ump1re">
     </div>
   `;
   els['leaderboard-actions'].hidden = false;
@@ -1281,7 +1284,7 @@ async function buildLeaderboardShareImage(standings) {
   }
 
   // The title and top three share one lower-third scoreboard card.
-  const panel = { x: 48, y: 740, width: 984, height: 548 };
+  const panel = { x: 48, y: 740, width: 984, height: 578 };
   ctx.fillStyle = 'rgba(8,10,14,0.93)';
   roundRect(ctx, panel.x, panel.y, panel.width, panel.height, 28);
   ctx.fill();
@@ -1342,17 +1345,23 @@ async function buildLeaderboardShareImage(standings) {
     ctx.textAlign = 'left';
   });
 
+  ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(72, 1254);
+  ctx.lineTo(1008, 1254);
+  ctx.stroke();
   ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = 'rgba(245,247,255,0.58)';
+  ctx.fillStyle = 'rgba(245,247,255,0.72)';
   ctx.font = '700 16px Inter, system-ui, sans-serif';
-  ctx.fillText('PADEL. SCORED PROPERLY.', 72, 1330);
+  ctx.fillText('Padel. Scored Properly.', 72, 1292);
   if (brand) {
-    drawImageContain(ctx, brand, 838, 1297, 170, 50);
+    drawImageContain(ctx, brand, 838, 1262, 170, 42);
   } else {
     ctx.textAlign = 'right';
     ctx.fillStyle = '#fff';
     ctx.font = '900 25px Inter, system-ui, sans-serif';
-    ctx.fillText('UMP1RE', 1008, 1330);
+    ctx.fillText('UMP1RE', 1008, 1292);
   }
 
   return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
