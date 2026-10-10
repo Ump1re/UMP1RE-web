@@ -1285,7 +1285,7 @@ async function buildLeaderboardShareImage(standings) {
   }
 
   // The title and top three share one lower-third scoreboard card.
-  const panel = { x: 48, y: 790, width: 984, height: 495 };
+  const panel = { x: 48, y: 790, width: 984, height: 420 };
   ctx.fillStyle = 'rgba(8,10,14,0.93)';
   roundRect(ctx, panel.x, panel.y, panel.width, panel.height, 28);
   ctx.fill();
@@ -1297,27 +1297,27 @@ async function buildLeaderboardShareImage(standings) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = lime;
-  ctx.font = '36px TimesSquare, Inter, system-ui, sans-serif';
-  ctx.fillText('AMERICANO', width / 2, 830);
+  ctx.font = '40px TimesSquare, Inter, system-ui, sans-serif';
+  ctx.fillText('AMERICANO', width / 2, 824);
   ctx.fillStyle = '#fff';
-  ctx.font = '48px TimesSquare, Inter, system-ui, sans-serif';
-  ctx.fillText('WINNER', width / 2, 872);
+  ctx.font = '56px TimesSquare, Inter, system-ui, sans-serif';
+  ctx.fillText('WINNER', width / 2, 864);
 
   ctx.textAlign = 'left';
   ctx.fillStyle = 'rgba(245,247,255,0.64)';
-  ctx.font = '800 16px Inter, system-ui, sans-serif';
-  ctx.fillText('FINAL STANDINGS', 84, 899);
+  ctx.font = '800 18px Inter, system-ui, sans-serif';
+  ctx.fillText('FINAL STANDINGS', 84, 887);
   ctx.textAlign = 'right';
-  ctx.fillText(state.leaderboardView === 'raw' ? 'RAW POINTS' : 'POINTS', 996, 899);
+  ctx.fillText(state.leaderboardView === 'raw' ? 'RAW POINTS' : 'POINTS', 996, 887);
   ctx.textAlign = 'left';
 
   rows.forEach((row, index) => {
-    const rowY = 916 + index * 91;
+    const rowY = 900 + index * 70;
     if (index === 0) {
       ctx.fillStyle = lime;
-      roundRect(ctx, 70, rowY, 940, 82, 16);
+      roundRect(ctx, 70, rowY, 940, 64, 14);
       ctx.fill();
-    } else if (index === 2) {
+    } else if (index > 0) {
       ctx.strokeStyle = 'rgba(255,255,255,0.12)';
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -1329,42 +1329,42 @@ async function buildLeaderboardShareImage(standings) {
     const textColor = index === 0 ? ink : '#f5f7ff';
     ctx.fillStyle = index === 0 ? 'rgba(9,11,16,0.68)' : lime;
     ctx.font = '900 18px Inter, system-ui, sans-serif';
-    ctx.fillText(index === 0 ? '1ST' : index === 1 ? '2ND' : '3RD', 96, rowY + 33);
+    ctx.fillText(index === 0 ? '1ST' : index === 1 ? '2ND' : '3RD', 96, rowY + 26);
     ctx.fillStyle = textColor;
-    ctx.font = '800 26px Inter, system-ui, sans-serif';
-    drawCanvasText(ctx, state.players[row.playerIdx], 190, rowY + 35, 530);
+    ctx.font = '800 32px Inter, system-ui, sans-serif';
+    drawCanvasText(ctx, state.players[row.playerIdx], 190, rowY + 30, 530);
     ctx.fillStyle = index === 0 ? 'rgba(9,11,16,0.68)' : 'rgba(245,247,255,0.60)';
-    ctx.font = '700 13px Inter, system-ui, sans-serif';
-    ctx.fillText(`${row.played} MATCHES  ·  ${row.wins} WINS`, 192, rowY + 61);
+    ctx.font = '700 18px Inter, system-ui, sans-serif';
+    ctx.fillText(`${row.played} MATCHES  ·  ${row.wins} WINS`, 192, rowY + 52);
     ctx.textAlign = 'right';
     ctx.fillStyle = textColor;
-    ctx.font = '900 34px Inter, system-ui, sans-serif';
-    ctx.fillText(String(row.displayPoints), 968, rowY + 38);
+    ctx.font = '900 40px Inter, system-ui, sans-serif';
+    ctx.fillText(String(row.displayPoints), 968, rowY + 36);
     ctx.fillStyle = index === 0 ? 'rgba(9,11,16,0.68)' : 'rgba(245,247,255,0.60)';
-    ctx.font = '800 11px Inter, system-ui, sans-serif';
-    ctx.fillText('POINTS', 968, rowY + 61);
+    ctx.font = '800 12px Inter, system-ui, sans-serif';
+    ctx.fillText('POINTS', 968, rowY + 52);
     ctx.textAlign = 'left';
   });
 
   ctx.strokeStyle = 'rgba(255,255,255,0.14)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(72, 1196);
-  ctx.lineTo(1008, 1196);
+  ctx.moveTo(72, 1116);
+  ctx.lineTo(1008, 1116);
   ctx.stroke();
   ctx.textBaseline = 'alphabetic';
   if (brand) {
-    drawImageContain(ctx, brand, 72, 1205, 170, 38);
+    drawImageContain(ctx, brand, 72, 1132, 170, 40);
   } else {
     ctx.textAlign = 'left';
     ctx.fillStyle = '#fff';
     ctx.font = '900 23px Inter, system-ui, sans-serif';
-    ctx.fillText('UMP1RE', 72, 1242);
+    ctx.fillText('UMP1RE', 72, 1170);
   }
   ctx.textAlign = 'right';
   ctx.fillStyle = 'rgba(245,247,255,0.72)';
   ctx.font = '700 14px Inter, system-ui, sans-serif';
-  ctx.fillText('Padel. Scored Properly.', 1008, 1242);
+  ctx.fillText('Padel. Scored Properly.', 1008, 1170);
   ctx.textAlign = 'left';
 
   return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
