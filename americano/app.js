@@ -744,6 +744,7 @@ function renderLeaderboard() {
     `
     : '';
 
+  els['leaderboard-subtitle'].hidden = false;
   els['leaderboard-subtitle'].textContent = `${completed} / ${state.fixtures.length} matches saved${fairnessAdjusted ? ' · uneven games adjusted with an average-score bonus' : ''}`;
   els['leaderboard-body'].innerHTML = `
     ${missedHtml}
@@ -824,7 +825,8 @@ function clearLeaderboardPreview() {
 }
 
 function renderLeaderboardSharePreview(standings, fairnessAdjusted) {
-  els['leaderboard-subtitle'].textContent = `Preview image · 1080 × 1350${fairnessAdjusted ? ' · ' + (state.leaderboardView === 'raw' ? 'raw points' : 'adjusted points') : ''}`;
+  els['leaderboard-subtitle'].hidden = true;
+  els['leaderboard-subtitle'].textContent = '';
   els['leaderboard-body'].innerHTML = `
     <div class="leaderboard-image-preview">
       <img src="${leaderboardPreviewUrl}" alt="Preview of the Americano final leaderboard share image" class="social-camera-rendered-image">
@@ -932,6 +934,7 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
   const subtitle = fairnessAdjusted
     ? (state.leaderboardView === 'raw' ? 'Raw points' : 'Adjusted points')
     : 'Final standings';
+  els['leaderboard-subtitle'].hidden = false;
   els['leaderboard-subtitle'].textContent = `Camera viewfinder · ${subtitle}`;
   els['leaderboard-body'].innerHTML = `
     <div class="social-camera-viewfinder">
