@@ -767,8 +767,8 @@ function renderLeaderboard() {
         <tbody>
           ${standings.map((row, idx) => {
             return `
-              <tr class="${idx === 0 && completed ? 'current-row' : ''}">
-                <td class="rank">${idx + 1}</td>
+              <tr class="${row.rank === 1 && completed ? 'current-row' : ''}">
+                <td class="rank">${row.rank}</td>
                 <td>${escapeHtml(state.players[row.playerIdx])}</td>
                 <td>${row.played}</td>
                 <td>${row.wins}</td>
@@ -949,9 +949,9 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
           <span>Final standings</span>
           <span>${state.leaderboardView === 'raw' ? 'Raw points' : 'Points'}</span>
         </div>
-        ${topThree.map((row, index) => `
-          <div class="social-camera-score-row ${index === 0 ? 'is-winner' : ''}">
-            <span class="social-camera-rank">${index === 0 ? '1ST' : index === 1 ? '2ND' : '3RD'}</span>
+        ${topThree.map((row) => `
+          <div class="social-camera-score-row ${row.rank === 1 ? 'is-winner' : ''}">
+            <span class="social-camera-rank">${formatLeaderboardRank(row.rank)}</span>
             <span class="social-camera-player">
               <strong>${escapeHtml(state.players[row.playerIdx])}</strong>
               <small>${row.played} matches · ${row.wins} wins</small>
@@ -1266,7 +1266,8 @@ async function buildLeaderboardShareImage(standings) {
 
   rows.forEach((row, index) => {
     const rowY = 900 + index * 70;
-    if (index === 0) {
+    const isWinner = row.rank === 1;
+    if (isWinner) {
       ctx.fillStyle = lime;
       roundRect(ctx, 70, rowY, 940, 64, 14);
       ctx.fill();
@@ -1279,21 +1280,21 @@ async function buildLeaderboardShareImage(standings) {
       ctx.stroke();
     }
 
-    const textColor = index === 0 ? ink : '#f5f7ff';
-    ctx.fillStyle = index === 0 ? 'rgba(9,11,16,0.68)' : lime;
+    const textColor = isWinner ? ink : '#f5f7ff';
+    ctx.fillStyle = isWinner ? 'rgba(9,11,16,0.68)' : lime;
     ctx.font = '900 18px Inter, system-ui, sans-serif';
-    ctx.fillText(index === 0 ? '1ST' : index === 1 ? '2ND' : '3RD', 96, rowY + 26);
+    ctx.fillText(formatLeaderboardRank(row.rank), 96, rowY + 26);
     ctx.fillStyle = textColor;
     ctx.font = '800 32px Inter, system-ui, sans-serif';
     drawCanvasText(ctx, state.players[row.playerIdx], 190, rowY + 30, 530);
-    ctx.fillStyle = index === 0 ? 'rgba(9,11,16,0.68)' : 'rgba(245,247,255,0.60)';
+    ctx.fillStyle = isWinner ? 'rgba(9,11,16,0.68)' : 'rgba(245,247,255,0.60)';
     ctx.font = '700 18px Inter, system-ui, sans-serif';
     ctx.fillText(`${row.played} MATCHES  ·  ${row.wins} WINS`, 192, rowY + 52);
     ctx.textAlign = 'right';
     ctx.fillStyle = textColor;
     ctx.font = '900 40px Inter, system-ui, sans-serif';
     ctx.fillText(String(row.displayPoints), 968, rowY + 36);
-    ctx.fillStyle = index === 0 ? 'rgba(9,11,16,0.68)' : 'rgba(245,247,255,0.60)';
+    ctx.fillStyle = isWinner ? 'rgba(9,11,16,0.68)' : 'rgba(245,247,255,0.60)';
     ctx.font = '800 12px Inter, system-ui, sans-serif';
     ctx.fillText('POINTS', 968, rowY + 52);
     ctx.textAlign = 'left';
@@ -1902,6 +1903,11 @@ function fixtureLabel(fixture) {
   return `Round ${round}/${totalRounds} · Court ${court}/${totalCourts}`;
 }
 
+function formatLeaderboardRank(rank) {
+  const suffix = rank % 100 >= 11 && rank % 100 <= 13 ? 'TH' : ({ 1: 'ST', 2: 'ND', 3: 'RD' }[rank % 10] || 'TH');
+  return `${rank}${suffix}`;
+}
+
 function calcAmericanoStandings(numPlayers, fixtures, scores) {
   const pts = new Array(numPlayers).fill(0);
   const wins = new Array(numPlayers).fill(0);
@@ -1935,7 +1941,7 @@ function calcAmericanoStandings(numPlayers, fixtures, scores) {
     : 0;
   const expectedPlayed = tournamentComplete ? Math.max(...played, 0) : 0;
 
-  return Array.from({ length: numPlayers }, (_, i) => ({
+  const ranked = Array.from({ length: numPlayers }, (_, i) => ({
     playerIdx: i,
     points: pts[i] + (
       tournamentComplete && played[i] > 0 && played[i] < expectedPlayed
@@ -1950,9 +1956,18 @@ function calcAmericanoStandings(numPlayers, fixtures, scores) {
     played: played[i],
   })).sort((a, b) => (
     b.points - a.points ||
+    b.played - a.played ||
     b.wins - a.wins ||
     a.playerIdx - b.playerIdx
   ));
+
+  let lastRank = 0;
+  return ranked.map((row, index) => {
+    if (index === 0 || row.points !== ranked[index - 1].points || row.played !== ranked[index - 1].played) {
+      lastRank = index + 1;
+    }
+    return { ...row, rank: lastRank };
+  });
 }
 
 function validateScore(scoreA, scoreB, target) {
