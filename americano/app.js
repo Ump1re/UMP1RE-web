@@ -79,6 +79,7 @@ let leaderboardComposerActive = false;
 let leaderboardPreviewActive = false;
 let leaderboardPreviewBlob = null;
 let leaderboardPreviewUrl = null;
+let leaderboardPhotoCrop = { scale: 1, offsetX: 0, offsetY: 0 };
 
 document.addEventListener('DOMContentLoaded', async () => {
   config = await loadAmericanoConfig();
@@ -956,7 +957,10 @@ function renderLeaderboardSharePreview(standings, fairnessAdjusted) {
       const nextPhoto = await loadLeaderboardSharePhoto(file, true);
       releaseLeaderboardImage(leaderboardSharePhoto);
       leaderboardSharePhoto = nextPhoto;
-      openLeaderboardSharePreview(standings);
+      leaderboardPhotoCrop = { scale: 1, offsetX: 0, offsetY: 0 };
+      clearLeaderboardPreview();
+      leaderboardComposerActive = true;
+      renderLeaderboard();
     } catch (_) {
       updateLeaderboardShareStatus('That photo could not be loaded. The current preview is unchanged.');
     }
@@ -982,7 +986,8 @@ function renderLeaderboardComposer(standings) {
   els['leaderboard-subtitle'].hidden = true;
   els['leaderboard-subtitle'].textContent = '';
   els['leaderboard-body'].innerHTML = `
-    <div class="social-camera-viewfinder">
+    <div class="social-camera-viewfinder ${leaderboardSharePhoto ? 'has-photo' : ''}" data-social-crop-frame>
+      ${leaderboardSharePhoto ? `<img class="social-camera-photo" data-social-crop-photo src="${leaderboardSharePhoto._shareObjectUrl}" alt="">` : ''}
       <div class="social-camera-shade"></div>
       ${leaderboardClubLogo
         ? `<div class="social-camera-club"><img src="${leaderboardClubLogo._shareObjectUrl}" alt="Club logo"></div>`
@@ -1019,7 +1024,8 @@ function renderLeaderboardComposer(standings) {
       <div class="social-action-toolbar">
         <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-library aria-label="Choose from library" title="Choose from library">${socialIcon('gallery')}</button><span class="social-button-label">Gallery</span></span>
         <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-logo aria-label="Add or change club logo" title="Add or change club logo">${socialIcon('logo')}</button><span class="social-button-label">Club logo</span></span>
-        <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-cancel aria-label="Cancel" title="Cancel">${socialIcon('close')}</button><span class="social-button-label">Back</span></span>
+        <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-social-preview aria-label="Preview post" title="Preview post">${socialIcon('preview')}</button><span class="social-button-label">Preview</span></span>
+        <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-cancel aria-label="Back to standings" title="Back to standings">${socialIcon('close')}</button><span class="social-button-label">Back</span></span>
         <input type="file" accept="image/*" data-camera-library-input hidden>
         <input type="file" accept="image/*" data-camera-logo-input hidden>
       </div>
@@ -1044,16 +1050,88 @@ function renderLeaderboardComposer(standings) {
       const nextPhoto = await loadLeaderboardSharePhoto(file, true);
       releaseLeaderboardImage(leaderboardSharePhoto);
       leaderboardSharePhoto = nextPhoto;
+      leaderboardPhotoCrop = { scale: 1, offsetX: 0, offsetY: 0 };
       renderLeaderboard();
-      openLeaderboardSharePreview(standings);
     } catch (_) {
       updateLeaderboardShareStatus('That photo could not be loaded. Try another image.');
     }
   });
+  document.querySelector('[data-social-preview]')?.addEventListener('click', () => openLeaderboardSharePreview(standings));
+  bindSocialCropGestures();
   document.querySelector('[data-camera-cancel]')?.addEventListener('click', () => {
     leaderboardComposerActive = false;
     renderLeaderboard();
   });
+}
+
+function bindSocialCropGestures() {
+  const frame = document.querySelector('[data-social-crop-frame]');
+  const photo = frame?.querySelector('[data-social-crop-photo]');
+  if (!frame || !photo) return;
+
+  const pointers = new Map();
+  let gesture = null;
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const distance = points => Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+  const applyTransform = () => {
+    const overflowX = frame.clientWidth * (leaderboardPhotoCrop.scale - 1) / 2;
+    const overflowY = frame.clientHeight * (leaderboardPhotoCrop.scale - 1) / 2;
+    photo.style.transform = `translate3d(${-leaderboardPhotoCrop.offsetX * overflowX}px, ${-leaderboardPhotoCrop.offsetY * overflowY}px, 0) scale(${leaderboardPhotoCrop.scale})`;
+  };
+  const beginGesture = () => {
+    const points = Array.from(pointers.values());
+    if (points.length >= 2) {
+      gesture = {
+        mode: 'pinch',
+        distance: distance(points),
+        scale: leaderboardPhotoCrop.scale,
+        offsetX: leaderboardPhotoCrop.offsetX,
+        offsetY: leaderboardPhotoCrop.offsetY,
+      };
+    } else if (points.length === 1) {
+      gesture = {
+        mode: 'pan',
+        x: points[0].x,
+        y: points[0].y,
+        scale: leaderboardPhotoCrop.scale,
+        offsetX: leaderboardPhotoCrop.offsetX,
+        offsetY: leaderboardPhotoCrop.offsetY,
+      };
+    } else gesture = null;
+  };
+
+  frame.addEventListener('pointerdown', event => {
+    if (event.target.closest('button, input')) return;
+    event.preventDefault();
+    frame.setPointerCapture(event.pointerId);
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    beginGesture();
+  });
+  frame.addEventListener('pointermove', event => {
+    if (!pointers.has(event.pointerId) || !gesture) return;
+    event.preventDefault();
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (gesture.mode === 'pinch' && pointers.size >= 2) {
+      const points = Array.from(pointers.values()).slice(0, 2);
+      leaderboardPhotoCrop.scale = clamp(gesture.scale * distance(points) / Math.max(1, gesture.distance), 1, 4);
+      leaderboardPhotoCrop.offsetX = gesture.offsetX;
+      leaderboardPhotoCrop.offsetY = gesture.offsetY;
+    } else if (gesture.mode === 'pan' && pointers.size === 1) {
+      const point = pointers.get(event.pointerId);
+      const overflowX = frame.clientWidth * (gesture.scale - 1) / 2;
+      const overflowY = frame.clientHeight * (gesture.scale - 1) / 2;
+      leaderboardPhotoCrop.offsetX = overflowX > 0 ? clamp(gesture.offsetX - (point.x - gesture.x) / overflowX, -1, 1) : 0;
+      leaderboardPhotoCrop.offsetY = overflowY > 0 ? clamp(gesture.offsetY - (point.y - gesture.y) / overflowY, -1, 1) : 0;
+    }
+    applyTransform();
+  });
+  const endPointer = event => {
+    if (!pointers.has(event.pointerId)) return;
+    pointers.delete(event.pointerId);
+    beginGesture();
+  };
+  frame.addEventListener('pointerup', endPointer);
+  frame.addEventListener('pointercancel', endPointer);
 }
 
 function releaseLeaderboardImage(image) {
@@ -1107,6 +1185,7 @@ function socialIcon(name) {
     gallery: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m21 15-5-5L5 20"/>',
     logo: '<path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="M12 8v8m-4-4h8"/>',
     share: '<path d="M12 16V4m0 0 4 4m-4-4-4 4"/><path d="M20 16v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3"/>',
+    preview: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
     save: '<path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 17v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3"/>',
     back: '<path d="m15 18-6-6 6-6"/><path d="M9 12h12"/>',
     close: '<path d="m18 6-12 12M6 6l12 12"/>',
@@ -1181,7 +1260,7 @@ async function buildLeaderboardShareImage(standings) {
   }));
 
   if (leaderboardSharePhoto) {
-    drawImageCover(ctx, leaderboardSharePhoto, 0, 0, width, height);
+    drawImageCover(ctx, leaderboardSharePhoto, 0, 0, width, height, 0, leaderboardPhotoCrop);
   } else {
     const fallback = ctx.createLinearGradient(0, 0, width, height);
     fallback.addColorStop(0, '#222a32');
@@ -1337,7 +1416,7 @@ function drawCanvasText(ctx, text, x, y, maxWidth) {
   ctx.fillText(content, x, y);
 }
 
-function drawImageCover(ctx, image, x, y, width, height, radius = 0) {
+function drawImageCover(ctx, image, x, y, width, height, radius = 0, crop = null) {
   const sourceWidth = image.naturalWidth || image.width;
   const sourceHeight = image.naturalHeight || image.height;
   const frameRatio = width / height;
@@ -1354,6 +1433,16 @@ function drawImageCover(ctx, image, x, y, width, height, radius = 0) {
     cropHeight = sourceWidth / frameRatio;
     cropY = (sourceHeight - cropHeight) / 2;
   }
+
+  const scale = Math.max(1, Number(crop?.scale) || 1);
+  const offsetX = Math.max(-1, Math.min(1, Number(crop?.offsetX) || 0));
+  const offsetY = Math.max(-1, Math.min(1, Number(crop?.offsetY) || 0));
+  const baseWidth = cropWidth;
+  const baseHeight = cropHeight;
+  cropWidth = baseWidth / scale;
+  cropHeight = baseHeight / scale;
+  cropX += (baseWidth - cropWidth) / 2 + offsetX * (baseWidth - cropWidth) / 2;
+  cropY += (baseHeight - cropHeight) / 2 + offsetY * (baseHeight - cropHeight) / 2;
 
   ctx.save();
   if (radius > 0) {
