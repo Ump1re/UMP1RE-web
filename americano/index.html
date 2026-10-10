@@ -1791,6 +1791,7 @@
   }
 
   .social-camera-viewfinder {
+    container-type: inline-size;
     position: relative;
     width: min(100%, 420px, 48vh);
     aspect-ratio: 4 / 5;
@@ -1856,13 +1857,15 @@
   .social-camera-title {
     position: absolute;
     z-index: 2;
-    top: 20%;
-    left: 6%;
+    top: 15%;
+    left: 5%;
+    right: 5%;
     display: grid;
-    gap: 0;
+    gap: 0.08rem;
     color: #fff;
     font-family: 'TimesSquare', 'Bebas Neue', sans-serif;
-    line-height: 0.94;
+    line-height: 0.98;
+    text-align: center;
     text-transform: uppercase;
     text-shadow: 0 2px 18px rgba(0,0,0,0.48);
     pointer-events: none;
@@ -1870,11 +1873,11 @@
 
   .social-camera-title span {
     color: var(--lime);
-    font-size: clamp(1.7rem, 7vw, 3.5rem);
+    font-size: clamp(0.9rem, 4.6cqi, 1.25rem);
   }
 
   .social-camera-title strong {
-    font-size: clamp(2.2rem, 9vw, 4.6rem);
+    font-size: clamp(1.2rem, 7cqi, 1.85rem);
     font-weight: 400;
   }
 
