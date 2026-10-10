@@ -75,10 +75,7 @@ const state = {
 const els = {};
 let leaderboardSharePhoto = null;
 let leaderboardClubLogo = null;
-let leaderboardCameraActive = false;
 let leaderboardComposerActive = false;
-let leaderboardCameraStream = null;
-let leaderboardCameraZoom = 1;
 let leaderboardPreviewActive = false;
 let leaderboardPreviewBlob = null;
 let leaderboardPreviewUrl = null;
@@ -165,9 +162,77 @@ function pickConfiguredValue(value, options) {
   return options.includes(value) ? value : options[0];
 }
 
+const GAME_STORAGE_KEY = 'ump1re-americano-game-v1';
+
+function persistGameState() {
+  try {
+    if (!state.built) {
+      localStorage.removeItem(GAME_STORAGE_KEY);
+      return;
+    }
+    const snapshot = {
+      version: 1,
+      numPlayers: state.numPlayers,
+      courts: state.courts,
+      pointsPerGame: state.pointsPerGame,
+      rotations: state.rotations,
+      players: state.players,
+      schedule: state.schedule,
+      fixtures: state.fixtures,
+      scores: state.scores,
+      drafts: Array.from(state.drafts.entries()),
+      pageIndex: state.pageIndex,
+      currentRoundIndex: state.currentRoundIndex,
+      activeFixtureIndex: state.activeFixtureIndex,
+      returnPageIndex: state.returnPageIndex,
+      leaderboardView: state.leaderboardView,
+      built: state.built,
+    };
+    localStorage.setItem(GAME_STORAGE_KEY, JSON.stringify(snapshot));
+  } catch (_) {}
+}
+
+function restoreGameState() {
+  try {
+    const raw = localStorage.getItem(GAME_STORAGE_KEY);
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    if (saved?.version !== 1 || saved.built !== true ||
+        !Number.isInteger(saved.numPlayers) ||
+        !Array.isArray(saved.players) || saved.players.length !== saved.numPlayers ||
+        !Array.isArray(saved.schedule) || !Array.isArray(saved.fixtures) || saved.fixtures.length === 0 ||
+        !Array.isArray(saved.scores) || saved.scores.length !== saved.fixtures.length ||
+        !saved.fixtures.every(f => f && f.match && Array.isArray(f.match.a) && Array.isArray(f.match.b)) ||
+        !saved.scores.every(score => score === null || (score && Number.isFinite(score.scoreA) && Number.isFinite(score.scoreB)))) {
+      localStorage.removeItem(GAME_STORAGE_KEY);
+      return false;
+    }
+    Object.assign(state, {
+      numPlayers: saved.numPlayers,
+      courts: saved.courts,
+      pointsPerGame: saved.pointsPerGame,
+      rotations: saved.rotations,
+      players: saved.players,
+      schedule: saved.schedule,
+      fixtures: saved.fixtures,
+      scores: saved.scores,
+      drafts: new Map(Array.isArray(saved.drafts) ? saved.drafts.filter(entry => Array.isArray(entry) && Number.isInteger(entry[0])) : []),
+      pageIndex: Number.isInteger(saved.pageIndex) ? saved.pageIndex : 3,
+      currentRoundIndex: Number.isInteger(saved.currentRoundIndex) ? saved.currentRoundIndex : 0,
+      activeFixtureIndex: Number.isInteger(saved.activeFixtureIndex) ? saved.activeFixtureIndex : null,
+      returnPageIndex: Number.isInteger(saved.returnPageIndex) ? saved.returnPageIndex : 3,
+      leaderboardView: saved.leaderboardView === 'raw' ? 'raw' : 'adjusted',
+      built: true,
+    });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
 function initDefaults() {
   applyConfigDefaults();
   state.players = Array.from({ length: state.numPlayers }, (_, i) => `Player ${i + 1}`);
+  restoreGameState();
 }
 
 function bindEvents() {
@@ -182,6 +247,17 @@ function bindEvents() {
   els['quit-modal-cancel'].addEventListener('click', closeQuitModal);
   els['quit-modal-confirm'].addEventListener('click', confirmQuitSession);
 
+  window.addEventListener('beforeunload', event => {
+    if (!state.built) return;
+    persistGameState();
+    event.preventDefault();
+    event.returnValue = '';
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') persistGameState();
+  });
+  window.addEventListener('blur', persistGameState);
+  window.addEventListener('pagehide', persistGameState);
   window.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
     if (isQuitModalOpen()) {
@@ -225,7 +301,6 @@ function closeLeaderboard() {
   }
   els['leaderboard-modal'].classList.remove('open');
   els['leaderboard-modal'].setAttribute('aria-hidden', 'true');
-  stopLeaderboardCamera();
   clearLeaderboardPreview();
   if (els['leaderboard-actions']) {
     els['leaderboard-actions'].hidden = true;
@@ -332,7 +407,6 @@ function resetTournament() {
   releaseLeaderboardImage(leaderboardClubLogo);
   leaderboardSharePhoto = null;
   leaderboardClubLogo = null;
-  stopLeaderboardCamera();
   clearLeaderboardPreview();
   leaderboardComposerActive = false;
   render();
@@ -349,6 +423,7 @@ function render() {
   }
   els['screen-root'].innerHTML = renderPage();
   attachPageHandlers();
+  persistGameState();
 }
 
 function renderPage() {
@@ -713,6 +788,7 @@ function renderLeaderboard() {
     return;
   }
 
+  persistGameState();
   const standings = calcAmericanoStandings(state.numPlayers, state.fixtures, state.scores);
   const completed = countSavedFixtures();
   const missed = getMissedFixtures();
@@ -721,9 +797,9 @@ function renderLeaderboard() {
   if (!showPointsToggle) state.leaderboardView = 'raw';
   const displayedPoints = row => state.leaderboardView === 'raw' ? row.rawPoints : row.points;
 
-  if (leaderboardComposerActive || leaderboardCameraActive || leaderboardPreviewActive) {
+  if (leaderboardComposerActive || __removedCameraActive || leaderboardPreviewActive) {
     if (leaderboardPreviewActive) renderLeaderboardSharePreview(standings, fairnessAdjusted);
-    else renderLeaderboardCamera(standings, fairnessAdjusted);
+    else renderLeaderboardComposer(standings, fairnessAdjusted);
     return;
   }
 
@@ -838,7 +914,6 @@ function renderLeaderboardSharePreview(standings, fairnessAdjusted) {
     <div class="leaderboard-share">
       <div class="social-action-toolbar social-preview-toolbar">
         <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-preview-back aria-label="Back to standings" title="Back to standings">${socialIcon('back')}</button><span class="social-button-label">Back</span></span>
-        <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-preview-camera aria-label="Take a new photo" title="Take a new photo">${socialIcon('camera')}</button><span class="social-button-label">Camera</span></span>
         <span class="social-labelled-action"><button class="social-icon-btn social-icon-btn-logo" type="button" data-preview-logo aria-label="Add or change club logo" title="Add or change club logo">${socialIcon('logo')}</button><span class="social-button-label">Club logo</span></span>
         <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-preview-replace-photo aria-label="Replace photo" title="Replace photo">${socialIcon('gallery')}</button><span class="social-button-label">Gallery</span></span>
         <span class="social-labelled-action"><button class="social-icon-btn social-icon-btn-primary" type="button" data-preview-share-image aria-label="Share image" title="Share image">${socialIcon('share')}</button><span class="social-button-label">Share</span></span>
@@ -854,7 +929,6 @@ function renderLeaderboardSharePreview(standings, fairnessAdjusted) {
     leaderboardComposerActive = false;
     renderLeaderboard();
   });
-  document.querySelector('[data-preview-camera]')?.addEventListener('click', () => openLeaderboardCamera(standings));
   const logoInput = document.querySelector('[data-preview-logo-input]');
   document.querySelector('[data-preview-logo]')?.addEventListener('click', () => logoInput?.click());
   logoInput?.addEventListener('change', async event => {
@@ -898,47 +972,12 @@ function bindLeaderboardViewActions() {
   });
 }
 
-function openLeaderboardCamera(standings) {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    updateLeaderboardShareStatus('Camera preview is unavailable here. Choose a photo from your library instead.');
-    (document.querySelector('[data-camera-library-input]') || document.querySelector('[data-share-photo-input]'))?.click();
-    return;
-  }
-
-  clearLeaderboardPreview();
-  leaderboardComposerActive = true;
-  stopLeaderboardCamera();
-  navigator.mediaDevices.getUserMedia({
-    audio: false,
-    video: { facingMode: { ideal: 'environment' } },
-  }).then(stream => {
-    leaderboardCameraStream = stream;
-    leaderboardCameraActive = true;
-    renderLeaderboard();
-  }).catch(() => {
-    updateLeaderboardShareStatus('Camera access was unavailable. Choose a photo from your library instead.');
-    document.querySelector('[data-share-photo-input]')?.click();
-  });
-}
-
-function stopLeaderboardCamera() {
-  if (leaderboardCameraStream) {
-    leaderboardCameraStream.getTracks().forEach(track => track.stop());
-    leaderboardCameraStream = null;
-  }
-  leaderboardCameraActive = false;
-}
-
-function renderLeaderboardCamera(standings, fairnessAdjusted) {
+function renderLeaderboardComposer(standings) {
   const topThree = standings.slice(0, 3);
-  const subtitle = fairnessAdjusted
-    ? (state.leaderboardView === 'raw' ? 'Raw points' : 'Adjusted points')
-    : 'Final standings';
-  els['leaderboard-subtitle'].hidden = false;
-  els['leaderboard-subtitle'].textContent = `Camera viewfinder · ${subtitle}`;
+  els['leaderboard-subtitle'].hidden = true;
+  els['leaderboard-subtitle'].textContent = '';
   els['leaderboard-body'].innerHTML = `
     <div class="social-camera-viewfinder">
-      ${leaderboardCameraActive ? `<video data-social-camera autoplay muted playsinline aria-label="Live camera preview" style="transform: scale(${leaderboardCameraZoom})"></video>` : ''}
       <div class="social-camera-shade"></div>
       ${leaderboardClubLogo
         ? `<div class="social-camera-club"><img src="${leaderboardClubLogo._shareObjectUrl}" alt="Club logo"></div>`
@@ -973,10 +1012,8 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
   els['leaderboard-actions'].innerHTML = `
     <div class="leaderboard-share">
       <div class="social-action-toolbar">
-        <span class="social-labelled-action"><button class="social-icon-btn social-icon-btn-primary" type="button" data-camera-capture aria-label="Take photo" title="Take photo">${socialIcon('camera')}</button><span class="social-button-label">${leaderboardCameraActive ? 'Capture' : 'Camera'}</span></span>
         <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-library aria-label="Choose from library" title="Choose from library">${socialIcon('gallery')}</button><span class="social-button-label">Gallery</span></span>
         <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-logo aria-label="Add or change club logo" title="Add or change club logo">${socialIcon('logo')}</button><span class="social-button-label">Club logo</span></span>
-        <label class="camera-zoom-control" aria-label="Camera zoom"><span>−</span><input type="range" min="1" max="3" step="0.1" value="${leaderboardCameraZoom}" data-camera-zoom aria-label="Zoom"><span>+</span></label>
         <span class="social-labelled-action"><button class="social-icon-btn" type="button" data-camera-cancel aria-label="Cancel" title="Cancel">${socialIcon('close')}</button><span class="social-button-label">Back</span></span>
         <input type="file" accept="image/*" data-camera-library-input hidden>
         <input type="file" accept="image/*" data-camera-logo-input hidden>
@@ -985,22 +1022,6 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
     </div>
   `;
 
-  const video = document.querySelector('[data-social-camera]');
-  if (video && leaderboardCameraStream) {
-    video.srcObject = leaderboardCameraStream;
-    video.play().catch(() => {});
-  }
-
-  document.querySelector('[data-camera-capture]')?.addEventListener('click', () => {
-    if (!leaderboardCameraActive) openLeaderboardCamera(standings);
-    else captureLeaderboardCameraPhoto(standings, video);
-  });
-  const zoomControl = document.querySelector('[data-camera-zoom]');
-  zoomControl?.addEventListener('input', () => {
-    leaderboardCameraZoom = Number(zoomControl.value) || 1;
-    if (video) video.style.transform = `scale(${leaderboardCameraZoom})`;
-  });
-  bindCameraPinchZoom(document.querySelector('.social-camera-viewfinder'), video, zoomControl);
   document.querySelector('[data-camera-library]')?.addEventListener('click', () => {
     document.querySelector('[data-camera-library-input]')?.click();
   });
@@ -1018,7 +1039,6 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
       const nextPhoto = await loadLeaderboardSharePhoto(file, true);
       releaseLeaderboardImage(leaderboardSharePhoto);
       leaderboardSharePhoto = nextPhoto;
-      stopLeaderboardCamera();
       renderLeaderboard();
       openLeaderboardSharePreview(standings);
     } catch (_) {
@@ -1026,61 +1046,9 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
     }
   });
   document.querySelector('[data-camera-cancel]')?.addEventListener('click', () => {
-    stopLeaderboardCamera();
     leaderboardComposerActive = false;
     renderLeaderboard();
   });
-}
-
-function bindCameraPinchZoom(viewfinder, video, slider) {
-  if (!viewfinder || !video) return;
-  let startDistance = 0;
-  let startZoom = leaderboardCameraZoom;
-  const distance = touches => Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
-  viewfinder.addEventListener('touchstart', event => {
-    if (event.touches.length !== 2) return;
-    startDistance = distance(event.touches);
-    startZoom = leaderboardCameraZoom;
-  }, { passive: true });
-  viewfinder.addEventListener('touchmove', event => {
-    if (event.touches.length !== 2 || !startDistance) return;
-    event.preventDefault();
-    leaderboardCameraZoom = Math.min(3, Math.max(1, startZoom * distance(event.touches) / startDistance));
-    video.style.transform = `scale(${leaderboardCameraZoom})`;
-    if (slider) slider.value = leaderboardCameraZoom;
-  }, { passive: false });
-  viewfinder.addEventListener('touchend', event => { if (event.touches.length < 2) startDistance = 0; }, { passive: true });
-}
-
-async function captureLeaderboardCameraPhoto(standings, video) {
-  if (!video?.videoWidth || !video.videoHeight) {
-    updateLeaderboardShareStatus('The camera is still starting. Try again in a moment.');
-    return;
-  }
-  const canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const zoom = Math.max(1, leaderboardCameraZoom);
-  const sourceWidth = video.videoWidth / zoom;
-  const sourceHeight = video.videoHeight / zoom;
-  const sourceX = (video.videoWidth - sourceWidth) / 2;
-  const sourceY = (video.videoHeight - sourceHeight) / 2;
-  ctx.drawImage(video, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
-  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
-  if (!blob) {
-    updateLeaderboardShareStatus('Could not capture that photo. Please try again.');
-    return;
-  }
-  const file = new File([blob], 'americano-team-photo.jpg', { type: 'image/jpeg' });
-  releaseLeaderboardImage(leaderboardSharePhoto);
-  const nextPhoto = await loadLeaderboardSharePhoto(file, true);
-  releaseLeaderboardImage(leaderboardSharePhoto);
-  leaderboardSharePhoto = nextPhoto;
-  stopLeaderboardCamera();
-  renderLeaderboard();
-  openLeaderboardSharePreview(standings);
 }
 
 function releaseLeaderboardImage(image) {
