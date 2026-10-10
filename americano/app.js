@@ -761,8 +761,8 @@ function renderScorePage(fixtureIndex) {
   if (!fixture) return renderIntroPage();
   const draft = getDraft(fixtureIndex);
   const cols = scoreCols(state.pointsPerGame);
-  const teamA = teamLabel(fixture.match.a, ' & ');
-  const teamB = teamLabel(fixture.match.b, ' & ');
+  const teamA = teamLabel((fixture.displayMatch || fixture.match).a, ' & ');
+  const teamB = teamLabel((fixture.displayMatch || fixture.match).b, ' & ');
   const roundLabel = fixtureLabel(fixture);
   const scoreA = Number.isInteger(draft.a) ? draft.a : '—';
   const scoreB = Number.isInteger(draft.b) ? draft.b : '—';
@@ -818,15 +818,15 @@ function renderRoundOverviewPage(roundIndex = 0) {
   const safeRoundIndex = Math.max(0, Math.min(roundIndex, state.schedule.length - 1));
   const round = state.schedule[safeRoundIndex];
   const roundLabel = `Round ${safeRoundIndex + 1}/${state.schedule.length}`;
-  const roundFixtures = state.fixtures.filter((fixture) => fixture.roundIndex === safeRoundIndex);
+  const roundFixtures = state.fixtures.filter((fixture) => fixture.roundIndex === safeRoundIndex).sort((a, b) => a.courtIndex - b.courtIndex);
   const fixtureCols = Math.max(1, Math.min(3, roundFixtures.length || 1));
   const sit = round.sitOut.length ? round.sitOut.map(playerWithAvatar).join('') : '';
   const isFirstRound = safeRoundIndex === 0;
 
   const fixtureCards = roundFixtures.map((fixture) => {
     const saved = state.scores[fixture.fixtureIndex];
-    const teamA = fixture.match.a.map(playerWithAvatar).join('');
-    const teamB = fixture.match.b.map(playerWithAvatar).join('');
+    const teamA = (fixture.displayMatch || fixture.match).a.map(playerWithAvatar).join('');
+    const teamB = (fixture.displayMatch || fixture.match).b.map(playerWithAvatar).join('');
     return `
       <button class="schedule-item fixture-card ${saved ? 'completed' : ''}" type="button" data-open-fixture="${fixture.fixtureIndex}">
         <div class="fixture-card-court">Court ${fixture.courtIndex + 1}</div>
@@ -2081,6 +2081,13 @@ function buildFixtureOrder(schedule, configuredCourts = state.courts, playerCoun
         courtUse[playerIndex][courtIndex] += 1;
         lastCourt[playerIndex] = courtIndex;
       });
+      // Rotate the physical player positions as well as assigning a court.
+      // Keep team A/B unchanged for correct score attribution; swap only
+      // positions within each pair. The stored match remains scoring truth.
+      const displayMatch = {
+        a: (roundIndex + courtIndex) % 2 ? [...match.a].reverse() : [...match.a],
+        b: (roundIndex + courtIndex + 1) % 2 ? [...match.b].reverse() : [...match.b],
+      };
       fixtures.push({
         fixtureIndex: fixtures.length,
         roundIndex,
@@ -2089,6 +2096,7 @@ function buildFixtureOrder(schedule, configuredCourts = state.courts, playerCoun
         courtCount,
         round,
         match,
+        displayMatch,
       });
     });
   });
@@ -2096,33 +2104,37 @@ function buildFixtureOrder(schedule, configuredCourts = state.courts, playerCoun
 }
 
 function chooseRoundCourts(matches, courtCount, courtUse, lastCourt, roundIndex) {
+  // Assign distinct real courts to the actual four-player matches.
+  // Prioritise players visiting their least-used courts; discourage leaving
+  // anyone on the same court in consecutive appearances.
   let bestAssignment = null;
   let bestCost = Infinity;
   const assignment = [];
   const usedCourts = new Set();
 
   function search(matchIndex, cost) {
+    if (cost >= bestCost) return;
     if (matchIndex === matches.length) {
-      if (cost < bestCost) {
-        bestCost = cost;
-        bestAssignment = [...assignment];
-      }
+      bestCost = cost;
+      bestAssignment = [...assignment];
       return;
     }
-
-    const preferredCourt = (matchIndex + roundIndex) % courtCount;
-    for (let offset = 0; offset < courtCount; offset += 1) {
-      const court = (preferredCourt + offset) % courtCount;
+    const players = [...matches[matchIndex].a, ...matches[matchIndex].b];
+    // Stable but rotating tie-break, never a substitute for court balancing.
+    const firstCourt = (roundIndex + matchIndex) % courtCount;
+    for (let offset = 0; offset < courtCount; offset++) {
+      const court = (firstCourt + offset) % courtCount;
       if (usedCourts.has(court)) continue;
-
-      const players = [...matches[matchIndex].a, ...matches[matchIndex].b];
       let addedCost = 0;
-      players.forEach(playerIndex => {
-        const uses = courtUse[playerIndex]?.[court] || 0;
-        addedCost += (2 * uses) + 1;
-        if (lastCourt[playerIndex] === court) addedCost += 0.25;
-      });
-
+      for (const player of players) {
+        const history = courtUse[player] || [];
+        const visits = history[court] || 0;
+        const minVisits = Math.min(...history);
+        const repeated = lastCourt[player] === court;
+        addedCost += 10 * visits * visits + 10 * visits;
+        if (visits > minVisits) addedCost += 35 * (visits - minVisits);
+        if (repeated && courtCount > 1) addedCost += 18;
+      }
       assignment[matchIndex] = court;
       usedCourts.add(court);
       search(matchIndex + 1, cost + addedCost);
@@ -2131,7 +2143,7 @@ function chooseRoundCourts(matches, courtCount, courtUse, lastCourt, roundIndex)
   }
 
   search(0, 0);
-  return bestAssignment || matches.map((_, matchIndex) => matchIndex % courtCount);
+  return bestAssignment || matches.map((_, index) => index % courtCount);
 }
 
 function fixtureLabel(fixture) {
