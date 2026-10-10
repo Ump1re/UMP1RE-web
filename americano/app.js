@@ -1243,13 +1243,13 @@ async function buildLeaderboardShareImage(standings) {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = lime;
-  ctx.font = '66px TimesSquare, Inter, system-ui, sans-serif';
-  drawCanvasText(ctx, 'AMERICANO', 68, 270, 850);
+  ctx.font = '42px TimesSquare, Inter, system-ui, sans-serif';
+  drawCanvasText(ctx, 'AMERICANO', 68, 252, 850);
   ctx.fillStyle = '#fff';
-  ctx.font = '82px TimesSquare, Inter, system-ui, sans-serif';
-  ctx.fillText('WINNER', 68, 354);
+  ctx.font = '54px TimesSquare, Inter, system-ui, sans-serif';
+  ctx.fillText('WINNER', 68, 312);
   ctx.fillStyle = lime;
-  roundRect(ctx, 72, 379, 118, 6, 3);
+  roundRect(ctx, 72, 332, 92, 5, 2.5);
   ctx.fill();
 
   // A dark scoreboard panel carries the top three across the lower third of the photo.
