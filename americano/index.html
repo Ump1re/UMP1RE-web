@@ -2014,28 +2014,30 @@
   .social-camera-scoreboard {
     position: absolute;
     z-index: 3;
-    left: 4.5%;
-    right: 4.5%;
-    bottom: 5%;
-    display: grid;
-    gap: 0.12rem;
-    padding: 2.5%;
+    left: 8.333%;
+    right: 8.333%;
+    bottom: 10%;
+    height: 28.074%;
+    display: block;
+    padding: 0;
     border: 1px solid rgba(217,255,51,0.48);
-    border-radius: 14px;
+    border-radius: 2.6cqi;
     background: rgba(8,10,14,0.94);
     box-shadow: 0 8px 28px rgba(0,0,0,0.32);
   }
 
   .social-camera-winner-title {
+    position: absolute;
+    top: 0;
+    inset-inline: 0;
     display: grid;
     justify-items: center;
     gap: 0;
-    margin: 0 0 0.2rem;
+    margin: 0;
     font-family: 'TimesSquare', 'Bebas Neue', sans-serif;
     line-height: 0.95;
     text-align: center;
     text-transform: uppercase;
-    text-shadow: 0 2px 12px rgba(0,0,0,0.3);
   }
 
   .social-camera-winner-title span {
@@ -2050,33 +2052,41 @@
   }
 
   .social-camera-score-footer {
+    position: absolute;
+    top: 76.25%;
+    left: 2.44%;
+    right: 2.44%;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
-    margin-top: 0.25rem;
-    padding: 0.38rem 0.3rem 0.05rem;
+    gap: 1cqi;
+    margin: 0;
+    padding: 1.1cqi 0.5cqi 0;
     border-top: 1px solid rgba(255,255,255,0.14);
     color: rgba(245,247,255,0.72);
     font-size: 1.296cqi;
     font-weight: 700;
-    letter-spacing: 0.06em;
+    letter-spacing: 0;
     text-transform: uppercase;
   }
 
   .social-camera-score-footer img {
     display: block;
-    width: 22%;
-    max-width: 5.8rem;
-    max-height: 1.3rem;
+    width: 15.74cqi;
+    max-width: none;
+    max-height: 3.704cqi;
     object-fit: contain;
     object-position: right center;
   }
 
   .social-camera-scoreboard-head {
+    position: absolute;
+    top: 20.7%;
+    left: 3.33%;
+    right: 3.33%;
     display: flex;
     justify-content: space-between;
-    padding: 0.1rem 0.3rem 0.22rem;
+    padding: 0;
     color: rgba(245,247,255,0.66);
     font-size: 1.667cqi;
     font-weight: 800;
@@ -2085,15 +2095,23 @@
   }
 
   .social-camera-score-row {
-    min-height: 2.6rem;
+    position: absolute;
+    left: 2.44%;
+    right: 2.44%;
+    height: 14.25%;
+    min-height: 0;
     display: grid;
-    grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+    grid-template-columns: 6.5cqi minmax(0, 1fr) auto;
     align-items: center;
-    gap: 0.55rem;
-    padding: 0.32rem 0.55rem;
-    border-radius: 9px;
+    gap: 1cqi;
+    padding: 0 1.1cqi 0 2.44%;
+    border-radius: 1.1cqi;
     color: #f5f7ff;
   }
+
+  .social-camera-score-row:nth-of-type(3) { top: 27.44%; }
+  .social-camera-score-row:nth-of-type(4) { top: 42.74%; }
+  .social-camera-score-row:nth-of-type(5) { top: 58.05%; }
 
   .social-camera-score-row.is-winner {
     background: var(--lime);
@@ -3399,7 +3417,7 @@
   </div>
 </div>
 
-<script src="app.js?v=25" defer></script>
+<script src="app.js?v=26" defer></script>
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
