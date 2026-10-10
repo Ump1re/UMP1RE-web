@@ -1790,6 +1790,180 @@
     text-align: center;
   }
 
+  .social-camera-viewfinder {
+    position: relative;
+    width: min(100%, 420px);
+    aspect-ratio: 4 / 5;
+    margin: 0 auto;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 16px;
+    background: #090b10;
+    box-shadow: 0 18px 54px rgba(0,0,0,0.38);
+    isolation: isolate;
+  }
+
+  .social-camera-viewfinder video,
+  .social-camera-shade {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .social-camera-viewfinder video {
+    object-fit: cover;
+  }
+
+  .social-camera-shade {
+    z-index: 1;
+    background: linear-gradient(180deg, rgba(5,7,10,0.62), transparent 38%, rgba(5,7,10,0.10) 56%, rgba(5,7,10,0.54));
+    pointer-events: none;
+  }
+
+  .social-camera-brand {
+    position: absolute;
+    z-index: 2;
+    top: 4%;
+    left: 5%;
+    width: 27%;
+    max-height: 8%;
+    object-fit: contain;
+    object-position: left center;
+  }
+
+  .social-camera-club {
+    position: absolute;
+    z-index: 2;
+    top: 4%;
+    right: 4%;
+    width: 23%;
+    height: 10%;
+    display: grid;
+    place-items: center;
+    padding: 2%;
+    border: 1px solid rgba(255,255,255,0.24);
+    border-radius: 12px;
+    background: rgba(8,10,13,0.72);
+  }
+
+  .social-camera-club img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .social-camera-title {
+    position: absolute;
+    z-index: 2;
+    top: 20%;
+    left: 6%;
+    display: grid;
+    gap: 0;
+    color: #fff;
+    font-family: 'TimesSquare', 'Bebas Neue', sans-serif;
+    line-height: 0.94;
+    text-transform: uppercase;
+    text-shadow: 0 2px 18px rgba(0,0,0,0.48);
+    pointer-events: none;
+  }
+
+  .social-camera-title span {
+    color: var(--lime);
+    font-size: clamp(1.7rem, 7vw, 3.5rem);
+  }
+
+  .social-camera-title strong {
+    font-size: clamp(2.2rem, 9vw, 4.6rem);
+    font-weight: 400;
+  }
+
+  .social-camera-scoreboard {
+    position: absolute;
+    z-index: 3;
+    left: 4.5%;
+    right: 4.5%;
+    bottom: 4%;
+    display: grid;
+    gap: 0.12rem;
+    padding: 2.5%;
+    border: 1px solid rgba(217,255,51,0.48);
+    border-radius: 14px;
+    background: rgba(8,10,14,0.94);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.32);
+  }
+
+  .social-camera-scoreboard-head {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.1rem 0.3rem 0.22rem;
+    color: rgba(245,247,255,0.66);
+    font-size: clamp(0.55rem, 1.8vw, 0.8rem);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .social-camera-score-row {
+    min-height: 2.6rem;
+    display: grid;
+    grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.32rem 0.55rem;
+    border-radius: 9px;
+    color: #f5f7ff;
+  }
+
+  .social-camera-score-row.is-winner {
+    background: var(--lime);
+    color: #090b10;
+  }
+
+  .social-camera-rank {
+    color: var(--lime);
+    font-size: clamp(0.65rem, 2vw, 0.88rem);
+    font-weight: 900;
+  }
+
+  .social-camera-score-row.is-winner .social-camera-rank {
+    color: rgba(9,11,16,0.66);
+  }
+
+  .social-camera-player {
+    min-width: 0;
+    display: grid;
+    gap: 0.08rem;
+  }
+
+  .social-camera-player strong {
+    overflow: hidden;
+    font-size: clamp(0.72rem, 2.4vw, 1rem);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .social-camera-player small {
+    color: currentColor;
+    opacity: 0.68;
+    font-size: clamp(0.52rem, 1.7vw, 0.72rem);
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .social-camera-points {
+    font-size: clamp(0.9rem, 3vw, 1.3rem);
+    font-weight: 900;
+  }
+
+  .leaderboard-camera-viewfinder {
+    display: grid;
+    place-items: center;
+    min-height: 0;
+    padding: 0.25rem;
+  }
+
   .leaderboard-image-preview {
     display: grid;
     place-items: center;
