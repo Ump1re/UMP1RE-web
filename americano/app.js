@@ -77,6 +77,7 @@ let leaderboardSharePhoto = null;
 let leaderboardClubLogo = null;
 let leaderboardCameraActive = false;
 let leaderboardCameraStream = null;
+let leaderboardCameraZoom = 1;
 let leaderboardPreviewActive = false;
 let leaderboardPreviewBlob = null;
 let leaderboardPreviewUrl = null;
@@ -795,6 +796,7 @@ function renderLeaderboard() {
             </span>
             <span class="social-icon-control">
               <button class="social-icon-btn social-icon-btn-logo" type="button" data-share-club-logo aria-label="${leaderboardClubLogo ? 'Change club logo' : 'Add club logo'}" title="${leaderboardClubLogo ? 'Change club logo' : 'Add club logo'}">${leaderboardClubLogo ? `<img src="${leaderboardClubLogo._shareObjectUrl}" alt="">` : socialIcon('logo')}</button>
+              <span class="social-icon-label">Club logo</span>
               ${leaderboardClubLogo ? `<button class="social-icon-clear" type="button" data-remove-club-logo aria-label="Remove club logo" title="Remove club logo">${socialIcon('close')}</button>` : ''}
             </span>
             <button class="btn primary social-create-button" type="button" data-preview-leaderboard>${socialIcon('share')}<span>Create Social Post</span></button>
@@ -933,7 +935,7 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
   els['leaderboard-subtitle'].textContent = `Camera viewfinder · ${subtitle}`;
   els['leaderboard-body'].innerHTML = `
     <div class="social-camera-viewfinder">
-      <video data-social-camera autoplay muted playsinline aria-label="Live camera preview"></video>
+      <video data-social-camera autoplay muted playsinline aria-label="Live camera preview" style="transform: scale(${leaderboardCameraZoom})"></video>
       <div class="social-camera-shade"></div>
       ${leaderboardClubLogo
         ? `<div class="social-camera-club"><img src="${leaderboardClubLogo._shareObjectUrl}" alt="Club logo"></div>`
@@ -967,6 +969,7 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
       <div class="social-action-toolbar">
         <button class="social-icon-btn social-icon-btn-primary" type="button" data-camera-capture aria-label="Take photo" title="Take photo">${socialIcon('camera')}</button>
         <button class="social-icon-btn" type="button" data-camera-library aria-label="Choose from library" title="Choose from library">${socialIcon('gallery')}</button>
+        <label class="camera-zoom-control" aria-label="Camera zoom"><span>−</span><input type="range" min="1" max="3" step="0.1" value="${leaderboardCameraZoom}" data-camera-zoom aria-label="Zoom"><span>+</span></label>
         <button class="social-icon-btn" type="button" data-camera-cancel aria-label="Cancel" title="Cancel">${socialIcon('close')}</button>
         <input type="file" accept="image/*" data-camera-library-input hidden>
       </div>
@@ -983,6 +986,12 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
   document.querySelector('[data-camera-capture]')?.addEventListener('click', () => {
     captureLeaderboardCameraPhoto(standings, video);
   });
+  const zoomControl = document.querySelector('[data-camera-zoom]');
+  zoomControl?.addEventListener('input', () => {
+    leaderboardCameraZoom = Number(zoomControl.value) || 1;
+    if (video) video.style.transform = `scale(${leaderboardCameraZoom})`;
+  });
+  bindCameraPinchZoom(document.querySelector('.social-camera-viewfinder'), video, zoomControl);
   document.querySelector('[data-camera-library]')?.addEventListener('click', () => {
     document.querySelector('[data-camera-library-input]')?.click();
   });
@@ -1006,6 +1015,26 @@ function renderLeaderboardCamera(standings, fairnessAdjusted) {
   });
 }
 
+function bindCameraPinchZoom(viewfinder, video, slider) {
+  if (!viewfinder || !video) return;
+  let startDistance = 0;
+  let startZoom = leaderboardCameraZoom;
+  const distance = touches => Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+  viewfinder.addEventListener('touchstart', event => {
+    if (event.touches.length !== 2) return;
+    startDistance = distance(event.touches);
+    startZoom = leaderboardCameraZoom;
+  }, { passive: true });
+  viewfinder.addEventListener('touchmove', event => {
+    if (event.touches.length !== 2 || !startDistance) return;
+    event.preventDefault();
+    leaderboardCameraZoom = Math.min(3, Math.max(1, startZoom * distance(event.touches) / startDistance));
+    video.style.transform = `scale(${leaderboardCameraZoom})`;
+    if (slider) slider.value = leaderboardCameraZoom;
+  }, { passive: false });
+  viewfinder.addEventListener('touchend', event => { if (event.touches.length < 2) startDistance = 0; }, { passive: true });
+}
+
 async function captureLeaderboardCameraPhoto(standings, video) {
   if (!video?.videoWidth || !video.videoHeight) {
     updateLeaderboardShareStatus('The camera is still starting. Try again in a moment.');
@@ -1016,7 +1045,12 @@ async function captureLeaderboardCameraPhoto(standings, video) {
   canvas.height = video.videoHeight;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const zoom = Math.max(1, leaderboardCameraZoom);
+  const sourceWidth = video.videoWidth / zoom;
+  const sourceHeight = video.videoHeight / zoom;
+  const sourceX = (video.videoWidth - sourceWidth) / 2;
+  const sourceY = (video.videoHeight - sourceHeight) / 2;
+  ctx.drawImage(video, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
   const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
   if (!blob) {
     updateLeaderboardShareStatus('Could not capture that photo. Please try again.');
@@ -1143,7 +1177,7 @@ function socialIcon(name) {
   const paths = {
     camera: '<path d="M14 4h-4l-1.5 2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="12.5" r="3.5"/>',
     gallery: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m21 15-5-5L5 20"/>',
-    logo: '<rect x="3" y="5" width="15" height="15" rx="2"/><circle cx="8" cy="10" r="1.5"/><path d="m18 15-4-4-8 8"/><path d="M19 3v6m-3-3h6"/>',
+    logo: '<path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="M12 8v8m-4-4h8"/>',
     share: '<path d="M12 16V4m0 0 4 4m-4-4-4 4"/><path d="M20 16v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3"/>',
     save: '<path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 17v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3"/>',
     back: '<path d="m15 18-6-6 6-6"/><path d="M9 12h12"/>',
