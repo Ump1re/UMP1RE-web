@@ -1306,7 +1306,12 @@ async function buildLeaderboardShareImage(standings) {
   ctx.fillStyle = shade;
   ctx.fillRect(0, 0, width, height);
 
-  if (document.fonts?.load) await document.fonts.load('82px TimesSquare');
+  if (document.fonts?.load) {
+    await Promise.all([
+      document.fonts.load('82px TimesSquare'),
+      document.fonts.load('24px "Bebas Neue"')
+    ]);
+  }
   const brand = await new Promise(resolve => {
     const image = new Image();
     image.onload = () => resolve(image);
@@ -1400,10 +1405,16 @@ async function buildLeaderboardShareImage(standings) {
     ctx.font = '900 23px Inter, system-ui, sans-serif';
     ctx.fillText('UMP1RE', 112, 1180);
   }
-  ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(245,247,255,0.72)';
-  ctx.font = '700 14px Inter, system-ui, sans-serif';
-  ctx.fillText('Padel. Scored Properly.', 520, 1180);
+  ctx.textAlign = 'left';
+  ctx.font = '24px "Bebas Neue", sans-serif';
+  const taglineWhite = 'Padel.';
+  const taglineLime = ' Scored Properly.';
+  const taglineWidth = ctx.measureText(taglineWhite + taglineLime).width;
+  const taglineX = 520 - taglineWidth / 2;
+  ctx.fillStyle = '#fff';
+  ctx.fillText(taglineWhite, taglineX, 1180);
+  ctx.fillStyle = lime;
+  ctx.fillText(taglineLime, taglineX + ctx.measureText(taglineWhite).width, 1180);
   if (utcWordmark) {
     drawImageContain(ctx, utcWordmark, 808, 1131, 150, 77);
   }
