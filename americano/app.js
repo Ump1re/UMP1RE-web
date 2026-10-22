@@ -1313,6 +1313,12 @@ async function buildLeaderboardShareImage(standings) {
     image.onerror = () => resolve(null);
     image.src = '/assets/UMP1RE_Logo.svg';
   });
+  const utcWordmark = await new Promise(resolve => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = '/assets/UpTheCreek_White.png';
+  });
   if (leaderboardClubLogo) {
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.68)';
@@ -1394,10 +1400,13 @@ async function buildLeaderboardShareImage(standings) {
     ctx.font = '900 23px Inter, system-ui, sans-serif';
     ctx.fillText('UMP1RE', 112, 1180);
   }
-  ctx.textAlign = 'right';
+  ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(245,247,255,0.72)';
   ctx.font = '700 14px Inter, system-ui, sans-serif';
-  ctx.fillText('Padel. Scored Properly.', 968, 1180);
+  ctx.fillText('Padel. Scored Properly.', 520, 1180);
+  if (utcWordmark) {
+    drawImageContain(ctx, utcWordmark, 808, 1131, 150, 77);
+  }
   ctx.textAlign = 'left';
 
   return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
